@@ -34,3 +34,23 @@ export interface RegisterPayload {
   password:         string;
   confirm_password: string;
 }
+
+export interface AdminMemberPayload {
+  first_name: string;
+  last_name:  string;
+  email:      string;
+  phone?:     string;
+  dob?:       string;
+  address?:   string;
+  password:   string;
+  status?:    MemberStatus;
+}
+
+export interface UpdateMemberPayload {
+  first_name: string;
+  last_name:  string;
+  email:      string;
+  phone?:     string;
+  dob?:       string;
+  address?:   string;
+}

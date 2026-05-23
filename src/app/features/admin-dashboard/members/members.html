@@ -6,6 +6,13 @@
       <h2 class="text-xl font-bold text-gray-900">Members</h2>
       <p class="text-sm text-gray-500 mt-0.5">{{ total() }} total members</p>
     </div>
+    <button type="button" (click)="openCreate()"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add Member
+    </button>
   </div>
 
   <!-- Action feedback -->
@@ -101,6 +108,10 @@
               <td class="px-6 py-4 text-sm text-gray-500">{{ member.created_at | slice:0:10 }}</td>
               <td class="px-6 py-4 text-right">
                 <div class="flex items-center justify-end gap-2">
+                  <button type="button" (click)="openEdit(member)"
+                    class="text-xs font-medium text-blue-600 hover:text-blue-800 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors">
+                    Edit
+                  </button>
                   @if (member.status === 'pending_kyc' || member.status === 'suspended') {
                     <button type="button" (click)="updateStatus(member, 'active')"
                       class="text-xs font-medium text-green-700 hover:text-green-900 px-2.5 py-1 rounded-lg hover:bg-green-50 transition-colors">
@@ -141,3 +152,155 @@
     }
   </div>
 </div>
+
+<!-- Add / Edit Member slide-over -->
+@if (showModal()) {
+  <!-- Backdrop -->
+  <div class="fixed inset-0 bg-black/40 z-40" (click)="closeModal()"></div>
+
+  <!-- Panel -->
+  <div class="fixed inset-y-0 right-0 w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+      <h3 class="text-lg font-semibold text-gray-900">
+        {{ modalMode() === 'create' ? 'Add Member' : 'Edit Member' }}
+      </h3>
+      <button type="button" (click)="closeModal()"
+        class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto px-6 py-5">
+
+      @if (modalError()) {
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          {{ modalError() }}
+        </div>
+      }
+
+      @if (isModalLoading()) {
+        <div class="flex items-center justify-center py-16">
+          <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </div>
+      } @else {
+        <form [formGroup]="form" class="space-y-4">
+
+          <!-- First Name / Last Name -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                First Name <span class="text-red-500">*</span>
+              </label>
+              <input formControlName="first_name" type="text" placeholder="Jane"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              @if (form.get('first_name')?.invalid && form.get('first_name')?.touched) {
+                <p class="text-xs text-red-600 mt-1">First name is required.</p>
+              }
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Last Name <span class="text-red-500">*</span>
+              </label>
+              <input formControlName="last_name" type="text" placeholder="Doe"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              @if (form.get('last_name')?.invalid && form.get('last_name')?.touched) {
+                <p class="text-xs text-red-600 mt-1">Last name is required.</p>
+              }
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Email <span class="text-red-500">*</span>
+            </label>
+            <input formControlName="email" type="email" placeholder="jane@example.com"
+              class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            @if (form.get('email')?.invalid && form.get('email')?.touched) {
+              <p class="text-xs text-red-600 mt-1">A valid email is required.</p>
+            }
+          </div>
+
+          <!-- Phone / DOB -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input formControlName="phone" type="tel" placeholder="+1 555 000 0000"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+              <input formControlName="dob" type="date"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            </div>
+          </div>
+
+          <!-- Address -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <textarea formControlName="address" rows="2" placeholder="123 Main St, City, Country"
+              class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+          </div>
+
+          @if (modalMode() === 'create') {
+            <!-- Status (create only) -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Initial Status</label>
+              <select formControlName="status"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="pending_kyc">Pending KYC</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+
+            <!-- Password (create only) -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Password <span class="text-red-500">*</span>
+              </label>
+              <input formControlName="password" type="password"
+                placeholder="Min 8 chars, 1 uppercase, 1 number"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              @if (form.get('password')?.invalid && form.get('password')?.touched) {
+                <p class="text-xs text-red-600 mt-1">
+                  Password must be at least 8 characters and include 1 uppercase letter and 1 number.
+                </p>
+              }
+            </div>
+          }
+
+        </form>
+      }
+    </div>
+
+    <!-- Footer -->
+    <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 shrink-0">
+      <button type="button" (click)="closeModal()"
+        class="px-4 py-2 text-sm font-medium text-gray-700 rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors">
+        Cancel
+      </button>
+      <button type="button" (click)="saveModal()" [disabled]="isSaving() || isModalLoading()"
+        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
+        @if (isSaving()) {
+          <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          Saving…
+        } @else {
+          {{ modalMode() === 'create' ? 'Create Member' : 'Save Changes' }}
+        }
+      </button>
+    </div>
+
+  </div>
+}

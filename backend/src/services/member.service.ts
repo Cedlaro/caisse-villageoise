@@ -121,14 +121,17 @@ export async function listMembers(opts: {
   );
   const total = (countRows[0] as { total: number }).total;
 
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  // pool.query (not execute) is required here — MySQL prepared statements
+  // reject LIMIT/OFFSET as bound parameters (ER_WRONG_ARGUMENTS).
+  // limit and offset are controlled integers so inlining them is safe.
+  const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT m.id, m.member_number, m.email, m.first_name, m.last_name,
             m.phone, m.status, m.created_at
      FROM members m
      ${where}
      ORDER BY m.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...params, limit, offset],
+     LIMIT ${limit} OFFSET ${offset}`,
+    params,
   );
 
   return {
@@ -152,6 +155,99 @@ export async function getMemberById(id: number): Promise<MemberDetail> {
     throw { status: 404, message: 'Member not found.' };
   }
   return rows[0] as MemberDetail;
+}
+
+// ── Admin: create member ──────────────────────────────────────────────────────
+
+export interface AdminCreatePayload extends RegisterPayload {
+  status: 'pending_kyc' | 'active' | 'suspended';
+}
+
+export async function adminCreateMember(payload: AdminCreatePayload): Promise<{ memberId: number; memberNumber: string }> {
+  const { firstName, lastName, email, phone, dob, address, password, status } = payload;
+
+  const [existing] = await pool.execute<RowDataPacket[]>(
+    'SELECT id FROM members WHERE email = ? LIMIT 1',
+    [email],
+  );
+  if ((existing as RowDataPacket[]).length > 0) {
+    throw { status: 409, message: 'An account with this email already exists.' };
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const connection   = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [result] = await connection.execute<ResultSetHeader>(
+      `INSERT INTO members
+         (member_number, email, first_name, last_name, phone, dob, address, password_hash, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['PENDING', email, firstName, lastName, phone || null, dob || null, address || null, passwordHash, status],
+    );
+
+    const memberId     = result.insertId;
+    const memberNumber = `MBR-${String(memberId).padStart(5, '0')}`;
+
+    await connection.execute<ResultSetHeader>(
+      'UPDATE members SET member_number = ? WHERE id = ?',
+      [memberNumber, memberId],
+    );
+
+    const accountNumber = `ACC-${String(memberId).padStart(7, '0')}`;
+    await connection.execute<ResultSetHeader>(
+      `INSERT INTO savings_accounts (member_id, account_number, account_type, balance)
+       VALUES (?, ?, 'share_capital', 0.00)`,
+      [memberId, accountNumber],
+    );
+
+    await connection.commit();
+    return { memberId, memberNumber };
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
+// ── Admin: update member profile ──────────────────────────────────────────────
+
+export interface UpdateMemberPayload {
+  firstName: string;
+  lastName:  string;
+  email:     string;
+  phone:     string;
+  dob:       string;
+  address:   string;
+}
+
+export async function updateMember(id: number, payload: UpdateMemberPayload): Promise<void> {
+  await getMemberById(id);
+
+  const [existing] = await pool.execute<RowDataPacket[]>(
+    'SELECT id FROM members WHERE email = ? AND id != ? LIMIT 1',
+    [payload.email, id],
+  );
+  if ((existing as RowDataPacket[]).length > 0) {
+    throw { status: 409, message: 'Another account with this email already exists.' };
+  }
+
+  await pool.execute<ResultSetHeader>(
+    `UPDATE members
+     SET first_name = ?, last_name = ?, email = ?, phone = ?, dob = ?, address = ?
+     WHERE id = ?`,
+    [
+      payload.firstName,
+      payload.lastName,
+      payload.email,
+      payload.phone  || null,
+      payload.dob    || null,
+      payload.address || null,
+      id,
+    ],
+  );
 }
 
 // ── Admin: update status ──────────────────────────────────────────────────────

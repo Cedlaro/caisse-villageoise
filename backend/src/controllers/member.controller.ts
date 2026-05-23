@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import {
   registerMember,
+  adminCreateMember,
+  updateMember,
   listMembers,
   getMemberById,
   updateMemberStatus,
@@ -28,6 +30,53 @@ export async function registerController(req: Request, res: Response, next: Next
       password:  req.body.password,
     });
     res.status(201).json(result);
+  } catch (err) {
+    if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }
+    next(err);
+  }
+}
+
+// POST /api/v1/admin/members
+export async function adminCreateController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
+
+  try {
+    const result = await adminCreateMember({
+      firstName: req.body.first_name,
+      lastName:  req.body.last_name,
+      email:     req.body.email,
+      phone:     req.body.phone    ?? '',
+      dob:       req.body.dob      ?? '',
+      address:   req.body.address  ?? '',
+      password:  req.body.password,
+      status:    req.body.status   ?? 'active',
+    });
+    res.status(201).json(result);
+  } catch (err) {
+    if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }
+    next(err);
+  }
+}
+
+// PUT /api/v1/admin/members/:id
+export async function updateMemberController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
+
+  try {
+    const id = Number(req.params['id']);
+    if (isNaN(id)) { res.status(400).json({ message: 'Invalid member ID.' }); return; }
+
+    await updateMember(id, {
+      firstName: req.body.first_name,
+      lastName:  req.body.last_name,
+      email:     req.body.email,
+      phone:     req.body.phone    ?? '',
+      dob:       req.body.dob      ?? '',
+      address:   req.body.address  ?? '',
+    });
+    res.json({ message: 'Member updated successfully.' });
   } catch (err) {
     if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }
     next(err);

@@ -6,6 +6,8 @@ import {
   MemberDetail,
   MemberListResponse,
   RegisterPayload,
+  AdminMemberPayload,
+  UpdateMemberPayload,
 } from '../models/member.models';
 
 @Injectable({ providedIn: 'root' })
@@ -41,6 +43,20 @@ export class MemberService {
     return this.http.patch<{ message: string }>(
       `${this.base}/admin/members/${id}/status`,
       { status },
+    );
+  }
+
+  adminCreateMember(payload: AdminMemberPayload): Observable<{ memberId: number; memberNumber: string }> {
+    return this.http.post<{ memberId: number; memberNumber: string }>(
+      `${this.base}/admin/members`,
+      payload,
+    );
+  }
+
+  updateMember(id: number, payload: UpdateMemberPayload): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(
+      `${this.base}/admin/members/${id}`,
+      payload,
     );
   }
 }
