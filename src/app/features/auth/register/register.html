@@ -1,0 +1,183 @@
+<div class="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+  <div class="w-full max-w-2xl">
+
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+
+      <!-- Header -->
+      <div class="mb-8">
+        <a routerLink="/login" class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          Back to sign in
+        </a>
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 bg-blue-900 rounded-xl flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+            </svg>
+          </div>
+          <span class="font-bold text-gray-900 text-lg">Caisse Villageoise</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900">Create your account</h1>
+        <p class="text-gray-500 text-sm mt-1">Join the credit union — your account will be reviewed for KYC approval.</p>
+      </div>
+
+      <!-- Success banner -->
+      @if (success()) {
+        <div class="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-xl mb-6">
+          <svg class="w-5 h-5 text-green-600 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <div>
+            <p class="text-sm font-semibold text-green-800">Registration successful!</p>
+            <p class="text-sm text-green-700 mt-0.5">Your account is pending KYC review. Redirecting to login…</p>
+          </div>
+        </div>
+      }
+
+      <!-- Error banner -->
+      @if (errorMessage()) {
+        <div class="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6">
+          <svg class="w-5 h-5 text-red-500 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <p class="text-sm text-red-700 font-medium">{{ errorMessage() }}</p>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+        <!-- Name row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">First name</label>
+            <input formControlName="first_name" type="text" placeholder="Marie"
+              [class]="isInvalid('first_name')
+                ? 'w-full px-4 py-3 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
+                : 'w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
+            @if (isInvalid('first_name')) {
+              <p class="mt-1 text-xs text-red-600">First name is required.</p>
+            }
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Last name</label>
+            <input formControlName="last_name" type="text" placeholder="Curie"
+              [class]="isInvalid('last_name')
+                ? 'w-full px-4 py-3 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
+                : 'w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
+            @if (isInvalid('last_name')) {
+              <p class="mt-1 text-xs text-red-600">Last name is required.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Email & Phone -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+            <input formControlName="email" type="email" autocomplete="email" placeholder="you@example.com"
+              [class]="isInvalid('email')
+                ? 'w-full px-4 py-3 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
+                : 'w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
+            @if (isInvalid('email')) {
+              <p class="mt-1 text-xs text-red-600">Valid email is required.</p>
+            }
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Phone number</label>
+            <input formControlName="phone" type="tel" placeholder="+237600000000"
+              [class]="isInvalid('phone')
+                ? 'w-full px-4 py-3 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
+                : 'w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
+            @if (isInvalid('phone')) {
+              <p class="mt-1 text-xs text-red-600">Phone number is required.</p>
+            }
+          </div>
+        </div>
+
+        <!-- DOB & Address -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Date of birth</label>
+            <input formControlName="dob" type="date"
+              [class]="isInvalid('dob')
+                ? 'w-full px-4 py-3 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
+                : 'w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
+            @if (isInvalid('dob')) {
+              <p class="mt-1 text-xs text-red-600">Date of birth is required.</p>
+            }
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
+            <input formControlName="address" type="text" placeholder="123 Main Street, Yaoundé"
+              [class]="isInvalid('address')
+                ? 'w-full px-4 py-3 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
+                : 'w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
+            @if (isInvalid('address')) {
+              <p class="mt-1 text-xs text-red-600">Address is required.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Password row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-7">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+            <div class="relative">
+              <input formControlName="password" [type]="showPassword() ? 'text' : 'password'"
+                autocomplete="new-password" placeholder="Min 8 chars, 1 uppercase, 1 number"
+                [class]="isInvalid('password')
+                  ? 'w-full px-4 py-3 pr-11 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
+                  : 'w-full px-4 py-3 pr-11 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
+              <button type="button" (click)="togglePassword()"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </button>
+            </div>
+            @if (isInvalid('password')) {
+              <p class="mt-1 text-xs text-red-600">Min 8 chars, 1 uppercase, 1 number.</p>
+            }
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirm password</label>
+            <input formControlName="confirm_password" [type]="showPassword() ? 'text' : 'password'"
+              autocomplete="new-password" placeholder="Repeat your password"
+              [class]="(isInvalid('confirm_password') || (form.hasError('passwordMismatch') && field('confirm_password')?.touched))
+                ? 'w-full px-4 py-3 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
+                : 'w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
+            @if (form.hasError('passwordMismatch') && field('confirm_password')?.touched) {
+              <p class="mt-1 text-xs text-red-600">Passwords do not match.</p>
+            }
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" [disabled]="form.invalid || isLoading()"
+          class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-900 text-white text-sm font-semibold rounded-xl hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
+          @if (isLoading()) {
+            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            Creating account…
+          } @else {
+            Create account
+          }
+        </button>
+
+        <p class="text-center text-sm text-gray-500 mt-4">
+          Already have an account?
+          <a routerLink="/login" class="text-blue-700 font-medium hover:underline">Sign in</a>
+        </p>
+      </form>
+    </div>
+  </div>
+</div>

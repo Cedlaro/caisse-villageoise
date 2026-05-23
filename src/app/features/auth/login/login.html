@@ -208,8 +208,16 @@
         </button>
       </form>
 
+      <!-- Register link (members only) -->
+      @if (activeTab() === 'member') {
+        <p class="mt-5 text-center text-sm text-gray-500">
+          Not a member yet?
+          <a routerLink="/register" class="text-blue-700 font-medium hover:underline">Create an account</a>
+        </p>
+      }
+
       <!-- Footer -->
-      <p class="mt-8 text-center text-xs text-gray-400">
+      <p class="mt-6 text-center text-xs text-gray-400">
         &copy; {{ currentYear }} Caisse Villageoise. All rights reserved.
       </p>
     </div>

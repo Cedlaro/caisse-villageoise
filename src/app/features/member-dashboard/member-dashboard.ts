@@ -1,12 +1,15 @@
 import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-member-dashboard',
   standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="min-h-screen bg-gray-50">
+    <div class="min-h-screen bg-gray-50 flex flex-col">
+
+      <!-- Top nav -->
       <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 bg-blue-900 rounded-lg flex items-center justify-center">
@@ -21,40 +24,38 @@ import { AuthService } from '../../core/services/auth.service';
           <span class="text-sm text-gray-600">
             {{ authService.currentUser()?.firstName }} {{ authService.currentUser()?.lastName }}
           </span>
-          <button
-            (click)="authService.logout()"
-            class="text-sm text-red-600 hover:text-red-700 font-medium"
-          >
-            Sign out
-          </button>
+          <button (click)="authService.logout()"
+            class="text-sm text-red-600 hover:text-red-700 font-medium">Sign out</button>
         </div>
       </header>
 
-      <main class="max-w-7xl mx-auto px-6 py-10">
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">Member Dashboard</h1>
-        <p class="text-gray-500">
-          Welcome back, {{ authService.currentUser()?.firstName }}.
-          Your account is active.
-        </p>
-        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <p class="text-sm text-gray-500 mb-1">Savings Balance</p>
-            <p class="text-3xl font-bold text-gray-900">XAF 0.00</p>
-          </div>
-          <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <p class="text-sm text-gray-500 mb-1">Active Loans</p>
-            <p class="text-3xl font-bold text-gray-900">0</p>
-          </div>
-          <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <p class="text-sm text-gray-500 mb-1">Beneficiaries</p>
-            <p class="text-3xl font-bold text-gray-900">0</p>
-          </div>
-        </div>
-      </main>
+      <div class="flex flex-1">
+        <!-- Sidebar -->
+        <aside class="w-56 bg-white border-r border-gray-200 p-4 space-y-1">
+          <a routerLink="overview" routerLinkActive="bg-blue-50 text-blue-900 font-semibold"
+            class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+            </svg>
+            Overview
+          </a>
+          <a routerLink="profile" routerLinkActive="bg-blue-50 text-blue-900 font-semibold"
+            class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            My Profile
+          </a>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-1 p-8 overflow-y-auto">
+          <router-outlet />
+        </main>
+      </div>
     </div>
   `,
 })
 export class MemberDashboard {
   protected readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
 }
