@@ -5,7 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LoanService } from '../../../core/services/loan.service';
 import { LoanWithMember, LoanStatus } from '../../../core/models/loan.models';
 
-type RepayModal = { loan: LoanWithMember };
+type LoanModalMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-admin-loans',
@@ -18,15 +18,15 @@ export class AdminLoans implements OnInit {
   private readonly fb          = inject(FormBuilder);
 
   // List
-  readonly loans       = signal<LoanWithMember[]>([]);
-  readonly total       = signal(0);
-  readonly page        = signal(1);
-  readonly limit       = signal(20);
+  readonly loans        = signal<LoanWithMember[]>([]);
+  readonly total        = signal(0);
+  readonly page         = signal(1);
+  readonly limit        = signal(20);
   readonly statusFilter = signal('all');
-  readonly searchQuery = signal('');
-  readonly isLoading   = signal(false);
-  readonly errorMsg    = signal<string | null>(null);
-  readonly actionMsg   = signal<string | null>(null);
+  readonly searchQuery  = signal('');
+  readonly isLoading    = signal(false);
+  readonly errorMsg     = signal<string | null>(null);
+  readonly actionMsg    = signal<string | null>(null);
 
   readonly totalPages = computed(() => Math.ceil(this.total() / this.limit()));
 
@@ -40,12 +40,20 @@ export class AdminLoans implements OnInit {
     { value: 'paid',         label: 'Paid' },
   ];
 
+  // Add / Edit loan modal
+  readonly showLoanModal  = signal(false);
+  readonly loanModalMode  = signal<LoanModalMode>('create');
+  readonly editingLoan    = signal<LoanWithMember | null>(null);
+  readonly isSavingLoan   = signal(false);
+  readonly loanModalError = signal<string | null>(null);
+  loanForm!: FormGroup;
+
   // Status transition modal
-  readonly showStatusModal  = signal(false);
-  readonly statusLoan       = signal<LoanWithMember | null>(null);
-  readonly pendingStatus    = signal<LoanStatus | null>(null);
-  readonly isSavingStatus   = signal(false);
-  readonly statusError      = signal<string | null>(null);
+  readonly showStatusModal = signal(false);
+  readonly statusLoan      = signal<LoanWithMember | null>(null);
+  readonly pendingStatus   = signal<LoanStatus | null>(null);
+  readonly isSavingStatus  = signal(false);
+  readonly statusError     = signal<string | null>(null);
 
   // Repayment modal
   readonly showRepayModal = signal(false);
@@ -71,6 +79,64 @@ export class AdminLoans implements OnInit {
   search(value: string): void { this.searchQuery.set(value); this.page.set(1); this.load(); }
   filterStatus(value: string): void { this.statusFilter.set(value); this.page.set(1); this.load(); }
   goToPage(p: number): void { this.page.set(p); this.load(); }
+
+  // ── Add / Edit loan modal ───────────────────────────────────────────────────
+
+  openCreateLoan(): void {
+    this.loanModalMode.set('create');
+    this.editingLoan.set(null);
+    this.loanModalError.set(null);
+    this.loanForm = this.fb.group({
+      member_number: ['', [Validators.required]],
+      loan_amount:   ['', [Validators.required, Validators.min(100)]],
+      interest_rate: ['', [Validators.required, Validators.min(0.01), Validators.max(100)]],
+      term_months:   ['', [Validators.required, Validators.min(1), Validators.max(360)]],
+    });
+    this.showLoanModal.set(true);
+  }
+
+  openEditLoan(loan: LoanWithMember): void {
+    this.loanModalMode.set('edit');
+    this.editingLoan.set(loan);
+    this.loanModalError.set(null);
+    this.loanForm = this.fb.group({
+      loan_amount:   [Number(loan.loan_amount),   [Validators.required, Validators.min(100)]],
+      interest_rate: [Number(loan.interest_rate), [Validators.required, Validators.min(0.01), Validators.max(100)]],
+      term_months:   [loan.term_months,            [Validators.required, Validators.min(1), Validators.max(360)]],
+    });
+    this.showLoanModal.set(true);
+  }
+
+  closeLoanModal(): void { this.showLoanModal.set(false); this.isSavingLoan.set(false); this.loanModalError.set(null); }
+
+  saveLoan(): void {
+    if (this.loanForm.invalid) { this.loanForm.markAllAsTouched(); return; }
+    this.isSavingLoan.set(true);
+    this.loanModalError.set(null);
+
+    const mode = this.loanModalMode();
+    const obs$ = mode === 'create'
+      ? this.loanService.adminCreateLoan(this.loanForm.value)
+      : this.loanService.updateLoan(this.editingLoan()!.id, this.loanForm.value);
+
+    obs$.subscribe({
+      next: (res) => {
+        this.isSavingLoan.set(false);
+        this.closeLoanModal();
+        this.actionMsg.set(res.message);
+        setTimeout(() => this.actionMsg.set(null), 3000);
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isSavingLoan.set(false);
+        this.loanModalError.set((err.error as { message?: string })?.message ?? 'Operation failed.');
+      },
+    });
+  }
+
+  canEdit(loan: LoanWithMember): boolean {
+    return loan.status === 'applied' || loan.status === 'under_review';
+  }
 
   // ── Status transition ───────────────────────────────────────────────────────
 
@@ -179,20 +245,5 @@ export class AdminLoans implements OnInit {
       defaulted:    'bg-red-100 text-red-800',
       paid:         'bg-emerald-100 text-emerald-800',
     }[status];
-  }
-
-  nextStatusLabel(status: LoanStatus): string {
-    return {
-      applied:      'Send for Review',
-      under_review: 'Approve',
-      approved:     'Activate',
-      active:       'Mark Defaulted',
-      defaulted:    '',
-      paid:         '',
-    }[status] ?? status;
-  }
-
-  nextStatusLabelAlt(status: LoanStatus): string {
-    return status === 'under_review' ? 'Return to Applied' : '';
   }
 }

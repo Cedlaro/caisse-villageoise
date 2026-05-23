@@ -5,11 +5,15 @@ import {
   applyForLoanController,
   listLoansController,
   getLoanController,
+  adminCreateLoanController,
+  updateLoanController,
   updateLoanStatusController,
   recordRepaymentController,
 } from '../controllers/loan.controller';
 import {
   applyLoanValidator,
+  adminCreateLoanValidator,
+  updateLoanValidator,
   updateStatusValidator,
   repaymentValidator,
 } from '../middleware/validators/loan.validator';
@@ -40,11 +44,28 @@ router.get(
   listLoansController,
 );
 
+// POST /admin/loans must come before /:id routes
+router.post(
+  '/admin/loans',
+  authenticate,
+  requireRole('staff', 'admin'),
+  adminCreateLoanValidator,
+  adminCreateLoanController,
+);
+
 router.get(
   '/admin/loans/:id',
   authenticate,
   requireRole('staff', 'admin'),
   getLoanController,
+);
+
+router.put(
+  '/admin/loans/:id',
+  authenticate,
+  requireRole('staff', 'admin'),
+  updateLoanValidator,
+  updateLoanController,
 );
 
 router.patch(

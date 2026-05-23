@@ -30,6 +30,14 @@ export class LoanService {
     return this.http.get<LoanWithMember>(`${this.base}/admin/loans/${id}`);
   }
 
+  adminCreateLoan(payload: { member_number: string; loan_amount: number; interest_rate: number; term_months: number }): Observable<{ message: string; loanId: number }> {
+    return this.http.post<{ message: string; loanId: number }>(`${this.base}/admin/loans`, payload);
+  }
+
+  updateLoan(id: number, payload: { loan_amount: number; interest_rate: number; term_months: number }): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${this.base}/admin/loans/${id}`, payload);
+  }
+
   updateStatus(id: number, status: LoanStatus): Observable<{ message: string }> {
     return this.http.patch<{ message: string }>(`${this.base}/admin/loans/${id}/status`, { status });
   }

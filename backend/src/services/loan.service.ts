@@ -118,6 +118,47 @@ export async function listLoans(opts: {
 
 // ── Mutations ─────────────────────────────────────────────────────────────────
 
+export async function createLoanByAdmin(payload: {
+  memberNumber: string;
+  loanAmount:   number;
+  interestRate: number;
+  termMonths:   number;
+  staffId:      number;
+}): Promise<{ loanId: number }> {
+  const { memberNumber, loanAmount, interestRate, termMonths, staffId } = payload;
+
+  const [memberRows] = await pool.execute<RowDataPacket[]>(
+    'SELECT id FROM members WHERE member_number = ? LIMIT 1',
+    [memberNumber],
+  );
+  if ((memberRows as RowDataPacket[]).length === 0) {
+    throw { status: 404, message: `Member '${memberNumber}' not found.` };
+  }
+  const memberId = (memberRows[0] as { id: number }).id;
+
+  const [result] = await pool.execute<ResultSetHeader>(
+    `INSERT INTO loans (member_id, loan_amount, interest_rate, term_months, status, remaining_balance, reviewed_by_staff_id)
+     VALUES (?, ?, ?, ?, 'applied', ?, ?)`,
+    [memberId, loanAmount, interestRate, termMonths, loanAmount, staffId],
+  );
+  return { loanId: result.insertId };
+}
+
+export async function updateLoan(
+  id:      number,
+  payload: { loanAmount: number; interestRate: number; termMonths: number },
+): Promise<void> {
+  const loan = await getLoanById(id);
+  if (!['applied', 'under_review'].includes(loan.status)) {
+    throw { status: 400, message: 'Only loans with status Applied or Under Review can be edited.' };
+  }
+  const { loanAmount, interestRate, termMonths } = payload;
+  await pool.execute<ResultSetHeader>(
+    'UPDATE loans SET loan_amount = ?, interest_rate = ?, term_months = ?, remaining_balance = ? WHERE id = ?',
+    [loanAmount, interestRate, termMonths, loanAmount, id],
+  );
+}
+
 export async function applyForLoan(payload: {
   memberId:     number;
   loanAmount:   number;

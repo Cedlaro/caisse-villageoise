@@ -78,6 +78,47 @@ export async function updateLoanStatusController(req: Request, res: Response, ne
   }
 }
 
+export async function adminCreateLoanController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) { res.status(400).json({ errors: errors.array() }); return; }
+  try {
+    const { member_number, loan_amount, interest_rate, term_months } = req.body as {
+      member_number: string; loan_amount: number; interest_rate: number; term_months: number;
+    };
+    const result = await loanService.createLoanByAdmin({
+      memberNumber: member_number,
+      loanAmount:   loan_amount,
+      interestRate: interest_rate,
+      termMonths:   term_months,
+      staffId:      req.user!.userId,
+    });
+    res.status(201).json({ message: 'Loan created successfully.', ...result });
+  } catch (err) {
+    if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }
+    next(err);
+  }
+}
+
+export async function updateLoanController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) { res.status(400).json({ errors: errors.array() }); return; }
+  try {
+    const id = parseInt(req.params['id']);
+    const { loan_amount, interest_rate, term_months } = req.body as {
+      loan_amount: number; interest_rate: number; term_months: number;
+    };
+    await loanService.updateLoan(id, {
+      loanAmount:   loan_amount,
+      interestRate: interest_rate,
+      termMonths:   term_months,
+    });
+    res.json({ message: 'Loan updated successfully.' });
+  } catch (err) {
+    if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }
+    next(err);
+  }
+}
+
 export async function recordRepaymentController(req: Request, res: Response, next: NextFunction): Promise<void> {
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(400).json({ errors: errors.array() }); return; }
