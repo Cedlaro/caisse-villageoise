@@ -7,7 +7,7 @@ import { Loan, LoanWithMember, LoanListResponse, ApplyLoanPayload, LoanStatus } 
 @Injectable({ providedIn: 'root' })
 export class LoanService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${environment.apiUrl}/api/v1`;
+  private readonly base = environment.apiUrl;
 
   getMyLoans(): Observable<Loan[]> {
     return this.http.get<Loan[]>(`${this.base}/members/me/loans`);
