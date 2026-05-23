@@ -5,7 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { SavingsService } from '../../../core/services/savings.service';
 import { AccountWithMember, Transaction, TransactionType } from '../../../core/models/savings.models';
 
-type ModalMode = 'deposit' | 'withdraw' | 'transfer';
+type ModalMode = 'deposit' | 'withdraw';
 
 @Component({
   selector: 'app-accounts',
@@ -102,7 +102,7 @@ export class Accounts implements OnInit {
     this.modalAccount.set(account);
     this.modalMode.set(mode);
     this.modalError.set(null);
-    this.form = this.buildForm(mode);
+    this.form = this.buildForm();
     this.showModal.set(true);
   }
 
@@ -117,14 +117,9 @@ export class Accounts implements OnInit {
     const amount  = Number(this.form.value.amount);
     const mode    = this.modalMode();
 
-    let obs$;
-    if (mode === 'deposit') {
-      obs$ = this.savingsService.deposit(account.id, amount);
-    } else if (mode === 'withdraw') {
-      obs$ = this.savingsService.withdraw(account.id, amount);
-    } else {
-      obs$ = this.savingsService.transfer(account.id, Number(this.form.value.to_account_id), amount);
-    }
+    const obs$ = mode === 'deposit'
+      ? this.savingsService.deposit(account.id, amount)
+      : this.savingsService.withdraw(account.id, amount);
 
     obs$.subscribe({
       next: (res) => {
@@ -164,14 +159,10 @@ export class Accounts implements OnInit {
   }
 
   modalTitle(): string {
-    return { deposit: 'Deposit Funds', withdraw: 'Withdraw Funds', transfer: 'Transfer Funds' }[this.modalMode()];
+    return { deposit: 'Deposit Funds', withdraw: 'Withdraw Funds' }[this.modalMode()];
   }
 
-  private buildForm(mode: ModalMode): FormGroup {
-    const base = { amount: ['', [Validators.required, Validators.min(0.01)]] };
-    if (mode === 'transfer') {
-      return this.fb.group({ ...base, to_account_id: ['', [Validators.required, Validators.min(1)]] });
-    }
-    return this.fb.group(base);
+  private buildForm(): FormGroup {
+    return this.fb.group({ amount: ['', [Validators.required, Validators.min(0.01)]] });
   }
 }

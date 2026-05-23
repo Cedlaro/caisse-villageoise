@@ -92,10 +92,6 @@
                     class="text-xs font-medium text-red-600 hover:text-red-800 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors">
                     Withdraw
                   </button>
-                  <button type="button" (click)="openModal(acc, 'transfer')"
-                    class="text-xs font-medium text-blue-600 hover:text-blue-800 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors">
-                    Transfer
-                  </button>
                 </div>
               </td>
             </tr>
@@ -224,14 +220,12 @@
 
       <!-- Body -->
       <div class="px-6 py-5">
-        @if (modalMode() !== 'transfer') {
-          <div class="mb-4 p-3 bg-gray-50 rounded-xl flex items-center justify-between text-sm">
-            <span class="text-gray-500">Current balance</span>
-            <span class="font-semibold text-gray-900">
-              RS {{ +modalAccount()!.balance | number:'1.2-2' }}
-            </span>
-          </div>
-        }
+        <div class="mb-4 p-3 bg-gray-50 rounded-xl flex items-center justify-between text-sm">
+          <span class="text-gray-500">Current balance</span>
+          <span class="font-semibold text-gray-900">
+            RS {{ +modalAccount()!.balance | number:'1.2-2' }}
+          </span>
+        </div>
 
         @if (modalError()) {
           <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
@@ -251,18 +245,6 @@
             }
           </div>
 
-          @if (modalMode() === 'transfer') {
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                Destination Account ID <span class="text-red-500">*</span>
-              </label>
-              <input formControlName="to_account_id" type="number" min="1" placeholder="Account ID"
-                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-              @if (form.get('to_account_id')?.invalid && form.get('to_account_id')?.touched) {
-                <p class="text-xs text-red-600 mt-1">Enter a valid destination account ID.</p>
-              }
-            </div>
-          }
         </form>
       </div>
 
@@ -274,9 +256,7 @@
         </button>
         <button type="button" (click)="saveModal()" [disabled]="isSaving()"
           [class]="'inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-60 disabled:cursor-not-allowed transition-colors ' +
-            (modalMode() === 'deposit' ? 'bg-green-600 hover:bg-green-700' :
-             modalMode() === 'withdraw' ? 'bg-red-600 hover:bg-red-700' :
-             'bg-blue-600 hover:bg-blue-700')">
+            (modalMode() === 'deposit' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700')">
           @if (isSaving()) {
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
