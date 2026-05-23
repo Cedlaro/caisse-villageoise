@@ -14,7 +14,7 @@ VALUES (
   'admin@caisse.local',
   'System',
   'Admin',
-  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/HS.iK8i',
+  '$2b$12$N2QKX3hteEUZ11/QnSnDROi0DhpnPGFHLj9wEGFPQibeJ0E9mgTDe',
   'admin',
   'active'
 );
@@ -26,7 +26,7 @@ VALUES (
   'staff@caisse.local',
   'Jean',
   'Dupont',
-  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/HS.iK8i',
+  '$2b$12$N2QKX3hteEUZ11/QnSnDROi0DhpnPGFHLj9wEGFPQibeJ0E9mgTDe',
   'staff',
   'active'
 );
@@ -39,7 +39,7 @@ VALUES (
   'Marie',
   'Curie',
   '+237600000001',
-  '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.',
+  '$2b$12$8IwkmD.wJjzO.wl..7Un0uJ9lBSf2UkARmjcS1nn1FnCCXGV2R4G2',
   'active'
 );
 
@@ -51,6 +51,6 @@ VALUES (
   'Paul',
   'Kunda',
   '+237600000002',
-  '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.',
+  '$2b$12$8IwkmD.wJjzO.wl..7Un0uJ9lBSf2UkARmjcS1nn1FnCCXGV2R4G2',
   'suspended'
 );
