@@ -162,6 +162,7 @@ export async function getMemberById(id: number): Promise<MemberDetail> {
 // ── Admin: create member ──────────────────────────────────────────────────────
 
 export interface AdminCreatePayload extends RegisterPayload {
+  email:  string;
   status: 'pending_kyc' | 'active' | 'suspended';
 }
 
