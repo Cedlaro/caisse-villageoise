@@ -14,7 +14,7 @@ import { MemberService } from '../../../core/services/member.service';
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div class="bg-white rounded-xl border border-gray-200 p-6">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Savings Balance</p>
-          <p class="text-3xl font-bold text-gray-900">XAF 0.00</p>
+          <p class="text-3xl font-bold text-gray-900">RS 0.00</p>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-6">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Active Loans</p>
