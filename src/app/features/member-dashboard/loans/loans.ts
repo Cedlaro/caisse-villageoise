@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, SlicePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LoanService } from '../../../core/services/loan.service';
@@ -8,7 +8,7 @@ import { Loan, LoanStatus } from '../../../core/models/loan.models';
 @Component({
   selector: 'app-member-loans',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, DecimalPipe],
+  imports: [FormsModule, ReactiveFormsModule, DecimalPipe, SlicePipe],
   templateUrl: './loans.html',
 })
 export class MemberLoans implements OnInit {
