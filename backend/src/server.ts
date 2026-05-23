@@ -4,6 +4,7 @@ import cors from 'cors';
 import authRoutes   from './routes/auth.routes';
 import memberRoutes  from './routes/member.routes';
 import savingsRoutes from './routes/savings.routes';
+import loanRoutes    from './routes/loan.routes';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/v1/auth',    authRoutes);
 app.use('/api/v1/members', memberRoutes);
 app.use('/api/v1',         memberRoutes);
 app.use('/api/v1',         savingsRoutes);
+app.use('/api/v1',         loanRoutes);
 
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

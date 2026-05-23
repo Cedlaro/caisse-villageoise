@@ -32,6 +32,10 @@ export const routes: Routes = [
         path: 'account',
         loadComponent: () => import('./features/member-dashboard/account/account').then(m => m.Account),
       },
+      {
+        path: 'loans',
+        loadComponent: () => import('./features/member-dashboard/loans/loans').then(m => m.MemberLoans),
+      },
     ],
   },
 
@@ -52,6 +56,10 @@ export const routes: Routes = [
       {
         path: 'accounts',
         loadComponent: () => import('./features/admin-dashboard/accounts/accounts').then(m => m.Accounts),
+      },
+      {
+        path: 'loans',
+        loadComponent: () => import('./features/admin-dashboard/loans/loans').then(m => m.AdminLoans),
       },
     ],
   },
