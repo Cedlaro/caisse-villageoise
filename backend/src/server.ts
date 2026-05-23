@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import authRoutes from './routes/auth.routes';
-import memberRoutes from './routes/member.routes';
+import authRoutes   from './routes/auth.routes';
+import memberRoutes  from './routes/member.routes';
+import savingsRoutes from './routes/savings.routes';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1/auth',    authRoutes);
 app.use('/api/v1/members', memberRoutes);
 app.use('/api/v1',         memberRoutes);
+app.use('/api/v1',         savingsRoutes);
 
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

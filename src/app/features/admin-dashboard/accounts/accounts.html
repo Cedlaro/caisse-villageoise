@@ -1,0 +1,293 @@
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-xl font-bold text-gray-900">Savings Accounts</h2>
+      <p class="text-sm text-gray-500 mt-0.5">{{ total() }} total accounts</p>
+    </div>
+    <!-- Search -->
+    <div class="relative w-72">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="text" placeholder="Search by name, account or member #…"
+        [value]="searchQuery()"
+        (input)="search($any($event.target).value)"
+        class="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  @if (actionMsg()) {
+    <div class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
+      <svg class="w-4 h-4 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+      </svg>
+      {{ actionMsg() }}
+    </div>
+  }
+  @if (errorMsg()) {
+    <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{{ errorMsg() }}</div>
+  }
+
+  <!-- Table -->
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-16">
+        <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+      </div>
+    } @else if (accounts().length === 0) {
+      <div class="text-center py-16 text-gray-400">
+        <svg class="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+        </svg>
+        <p class="text-sm">No accounts found.</p>
+      </div>
+    } @else {
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Member</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Balance (XAF)</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          @for (acc of accounts(); track acc.id) {
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-6 py-4">
+                <p class="text-sm font-mono text-gray-800">{{ acc.account_number }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ acc.created_at | slice:0:10 }}</p>
+              </td>
+              <td class="px-6 py-4">
+                <p class="text-sm font-medium text-gray-900">{{ acc.first_name }} {{ acc.last_name }}</p>
+                <p class="text-xs text-gray-400">{{ acc.member_number }}</p>
+              </td>
+              <td class="px-6 py-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                  {{ accountTypeLabel(acc.account_type) }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <span class="text-sm font-semibold text-gray-900">{{ +acc.balance | number:'1.2-2' }}</span>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <button type="button" (click)="openTxPanel(acc)"
+                    class="text-xs font-medium text-gray-600 hover:text-gray-900 px-2.5 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+                    History
+                  </button>
+                  <button type="button" (click)="openModal(acc, 'deposit')"
+                    class="text-xs font-medium text-green-700 hover:text-green-900 px-2.5 py-1 rounded-lg hover:bg-green-50 transition-colors">
+                    Deposit
+                  </button>
+                  <button type="button" (click)="openModal(acc, 'withdraw')"
+                    class="text-xs font-medium text-red-600 hover:text-red-800 px-2.5 py-1 rounded-lg hover:bg-red-50 transition-colors">
+                    Withdraw
+                  </button>
+                  <button type="button" (click)="openModal(acc, 'transfer')"
+                    class="text-xs font-medium text-blue-600 hover:text-blue-800 px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors">
+                    Transfer
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (totalPages() > 1) {
+        <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+          <p class="text-sm text-gray-500">Page {{ page() }} of {{ totalPages() }}</p>
+          <div class="flex gap-2">
+            <button type="button" [disabled]="page() === 1" (click)="goToPage(page() - 1)"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              Previous
+            </button>
+            <button type="button" [disabled]="page() === totalPages()" (click)="goToPage(page() + 1)"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              Next
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- Transaction history slide-over -->
+@if (showTxPanel()) {
+  <div class="fixed inset-0 bg-black/30 z-40" (click)="closeTxPanel()"></div>
+  <div class="fixed inset-y-0 right-0 w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+      <div>
+        <h3 class="text-base font-semibold text-gray-900">Transaction History</h3>
+        <p class="text-xs text-gray-400 mt-0.5">
+          {{ txAccount()?.first_name }} {{ txAccount()?.last_name }} · {{ txAccount()?.account_number }}
+        </p>
+      </div>
+      <button type="button" (click)="closeTxPanel()"
+        class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+      @if (isTxLoading()) {
+        <div class="flex items-center justify-center py-16">
+          <svg class="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </div>
+      } @else if (transactions().length === 0) {
+        <div class="text-center py-16 text-gray-400 text-sm">No transactions yet.</div>
+      } @else {
+        <table class="min-w-full divide-y divide-gray-100">
+          <thead class="bg-gray-50 sticky top-0">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+              <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">By</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            @for (tx of transactions(); track tx.id) {
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-3">
+                  <span [class]="'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ' + txTypeClass(tx.transaction_type)">
+                    {{ txTypeLabel(tx.transaction_type) }}
+                  </span>
+                </td>
+                <td class="px-6 py-3 text-right text-sm font-semibold"
+                  [class]="tx.transaction_type === 'deposit' ? 'text-green-700' : tx.transaction_type === 'withdrawal' ? 'text-red-600' : 'text-gray-900'">
+                  {{ tx.transaction_type === 'deposit' ? '+' : tx.transaction_type === 'withdrawal' ? '-' : '' }}{{ +tx.amount | number:'1.2-2' }}
+                </td>
+                <td class="px-6 py-3 text-xs text-gray-500">{{ tx.created_at | slice:0:10 }}</td>
+                <td class="px-6 py-3 text-xs text-gray-500">{{ tx.processed_by_name ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    @if (txTotalPages() > 1) {
+      <div class="flex items-center justify-between px-6 py-3 border-t border-gray-100 shrink-0">
+        <p class="text-xs text-gray-500">Page {{ txPage() }} of {{ txTotalPages() }}</p>
+        <div class="flex gap-2">
+          <button type="button" [disabled]="txPage() === 1" (click)="goToTxPage(txPage() - 1)"
+            class="px-3 py-1 text-xs rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            Previous
+          </button>
+          <button type="button" [disabled]="txPage() === txTotalPages()" (click)="goToTxPage(txPage() + 1)"
+            class="px-3 py-1 text-xs rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            Next
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Deposit / Withdraw / Transfer modal -->
+@if (showModal()) {
+  <div class="fixed inset-0 bg-black/40 z-40" (click)="closeModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div>
+          <h3 class="text-base font-semibold text-gray-900">{{ modalTitle() }}</h3>
+          <p class="text-xs text-gray-400 mt-0.5">
+            {{ modalAccount()?.first_name }} {{ modalAccount()?.last_name }} · {{ modalAccount()?.account_number }}
+          </p>
+        </div>
+        <button type="button" (click)="closeModal()"
+          class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="px-6 py-5">
+        @if (modalMode() !== 'transfer') {
+          <div class="mb-4 p-3 bg-gray-50 rounded-xl flex items-center justify-between text-sm">
+            <span class="text-gray-500">Current balance</span>
+            <span class="font-semibold text-gray-900">
+              {{ +modalAccount()!.balance | number:'1.2-2' }} XAF
+            </span>
+          </div>
+        }
+
+        @if (modalError()) {
+          <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            {{ modalError() }}
+          </div>
+        }
+
+        <form [formGroup]="form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Amount (XAF) <span class="text-red-500">*</span>
+            </label>
+            <input formControlName="amount" type="number" min="0.01" step="0.01" placeholder="0.00"
+              class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            @if (form.get('amount')?.invalid && form.get('amount')?.touched) {
+              <p class="text-xs text-red-600 mt-1">Enter a valid amount greater than 0.</p>
+            }
+          </div>
+
+          @if (modalMode() === 'transfer') {
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Destination Account ID <span class="text-red-500">*</span>
+              </label>
+              <input formControlName="to_account_id" type="number" min="1" placeholder="Account ID"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              @if (form.get('to_account_id')?.invalid && form.get('to_account_id')?.touched) {
+                <p class="text-xs text-red-600 mt-1">Enter a valid destination account ID.</p>
+              }
+            </div>
+          }
+        </form>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+        <button type="button" (click)="closeModal()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors">
+          Cancel
+        </button>
+        <button type="button" (click)="saveModal()" [disabled]="isSaving()"
+          [class]="'inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-60 disabled:cursor-not-allowed transition-colors ' +
+            (modalMode() === 'deposit' ? 'bg-green-600 hover:bg-green-700' :
+             modalMode() === 'withdraw' ? 'bg-red-600 hover:bg-red-700' :
+             'bg-blue-600 hover:bg-blue-700')">
+          @if (isSaving()) {
+            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            Processing…
+          } @else {
+            {{ modalTitle() }}
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

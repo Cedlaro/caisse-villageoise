@@ -28,6 +28,10 @@ export const routes: Routes = [
         path: 'profile',
         loadComponent: () => import('./features/member-dashboard/profile/profile').then(m => m.Profile),
       },
+      {
+        path: 'account',
+        loadComponent: () => import('./features/member-dashboard/account/account').then(m => m.Account),
+      },
     ],
   },
 
@@ -44,6 +48,10 @@ export const routes: Routes = [
       {
         path: 'members',
         loadComponent: () => import('./features/admin-dashboard/members/members').then(m => m.Members),
+      },
+      {
+        path: 'accounts',
+        loadComponent: () => import('./features/admin-dashboard/accounts/accounts').then(m => m.Accounts),
       },
     ],
   },
