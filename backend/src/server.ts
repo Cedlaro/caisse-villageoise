@@ -1,0 +1,41 @@
+import 'dotenv/config';
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import authRoutes from './routes/auth.routes';
+
+const app = express();
+
+// ── Global middleware ─────────────────────────────────────────────────────────
+
+app.use(cors({
+  origin:      process.env.CORS_ORIGIN ?? 'http://localhost:4200',
+  credentials: true,
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ── Routes ────────────────────────────────────────────────────────────────────
+
+app.use('/api/v1/auth', authRoutes);
+
+app.get('/api/v1/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ── Global error handler ──────────────────────────────────────────────────────
+
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Internal server error' });
+});
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+
+const PORT = Number(process.env.PORT ?? 3000);
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+export default app;
