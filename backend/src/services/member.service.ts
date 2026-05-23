@@ -162,19 +162,20 @@ export async function getMemberById(id: number): Promise<MemberDetail> {
 // ── Admin: create member ──────────────────────────────────────────────────────
 
 export interface AdminCreatePayload extends RegisterPayload {
-  email:  string;
   status: 'pending_kyc' | 'active' | 'suspended';
 }
 
 export async function adminCreateMember(payload: AdminCreatePayload): Promise<{ memberId: number; memberNumber: string }> {
   const { firstName, lastName, email, phone, dob, address, password, status } = payload;
 
-  const [existing] = await pool.execute<RowDataPacket[]>(
-    'SELECT id FROM members WHERE email = ? LIMIT 1',
-    [email],
-  );
-  if ((existing as RowDataPacket[]).length > 0) {
-    throw { status: 409, message: 'An account with this email already exists.' };
+  if (email) {
+    const [existing] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM members WHERE email = ? LIMIT 1',
+      [email],
+    );
+    if ((existing as RowDataPacket[]).length > 0) {
+      throw { status: 409, message: 'An account with this email already exists.' };
+    }
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -187,7 +188,7 @@ export async function adminCreateMember(payload: AdminCreatePayload): Promise<{ 
       `INSERT INTO members
          (member_number, email, first_name, last_name, phone, dob, address, password_hash, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ['PENDING', email, firstName, lastName, phone || null, dob || null, address || null, passwordHash, status],
+      ['PENDING', email || null, firstName, lastName, phone || null, dob || null, address || null, passwordHash, status],
     );
 
     const memberId     = result.insertId;
@@ -220,21 +221,23 @@ export async function adminCreateMember(payload: AdminCreatePayload): Promise<{ 
 export interface UpdateMemberPayload {
   firstName: string;
   lastName:  string;
-  email:     string;
-  phone:     string;
-  dob:       string;
-  address:   string;
+  email?:    string;
+  phone?:    string;
+  dob?:      string;
+  address?:  string;
 }
 
 export async function updateMember(id: number, payload: UpdateMemberPayload): Promise<void> {
   await getMemberById(id);
 
-  const [existing] = await pool.execute<RowDataPacket[]>(
-    'SELECT id FROM members WHERE email = ? AND id != ? LIMIT 1',
-    [payload.email, id],
-  );
-  if ((existing as RowDataPacket[]).length > 0) {
-    throw { status: 409, message: 'Another account with this email already exists.' };
+  if (payload.email) {
+    const [existing] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM members WHERE email = ? AND id != ? LIMIT 1',
+      [payload.email, id],
+    );
+    if ((existing as RowDataPacket[]).length > 0) {
+      throw { status: 409, message: 'Another account with this email already exists.' };
+    }
   }
 
   await pool.execute<ResultSetHeader>(
@@ -244,13 +247,45 @@ export async function updateMember(id: number, payload: UpdateMemberPayload): Pr
     [
       payload.firstName,
       payload.lastName,
-      payload.email,
-      payload.phone  || null,
-      payload.dob    || null,
+      payload.email   || null,
+      payload.phone   || null,
+      payload.dob     || null,
       payload.address || null,
       id,
     ],
   );
+}
+
+// ── Admin: dashboard stats ────────────────────────────────────────────────────
+
+export interface AdminStats {
+  totalMembers:     number;
+  pendingKyc:       number;
+  activeLoans:      number;
+  loanApplications: number;
+}
+
+export async function getAdminStats(): Promise<AdminStats> {
+  const [memberRows] = await pool.execute<RowDataPacket[]>(
+    `SELECT
+       COUNT(*) AS totalMembers,
+       SUM(status = 'pending_kyc') AS pendingKyc
+     FROM members`,
+  );
+  const [loanRows] = await pool.execute<RowDataPacket[]>(
+    `SELECT
+       SUM(status = 'active')  AS activeLoans,
+       SUM(status = 'applied') AS loanApplications
+     FROM loans`,
+  );
+  const m = memberRows[0];
+  const l = loanRows[0];
+  return {
+    totalMembers:     Number(m['totalMembers']     ?? 0),
+    pendingKyc:       Number(m['pendingKyc']        ?? 0),
+    activeLoans:      Number(l['activeLoans']        ?? 0),
+    loanApplications: Number(l['loanApplications']  ?? 0),
+  };
 }
 
 // ── Admin: update status ──────────────────────────────────────────────────────

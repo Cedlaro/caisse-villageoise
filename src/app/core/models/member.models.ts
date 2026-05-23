@@ -35,6 +35,13 @@ export interface RegisterPayload {
   confirm_password: string;
 }
 
+export interface AdminStats {
+  totalMembers:     number;
+  pendingKyc:       number;
+  activeLoans:      number;
+  loanApplications: number;
+}
+
 export interface AdminMemberPayload {
   first_name: string;
   last_name:  string;
@@ -49,7 +56,7 @@ export interface AdminMemberPayload {
 export interface UpdateMemberPayload {
   first_name: string;
   last_name:  string;
-  email:      string;
+  email?:     string;
   phone?:     string;
   dob?:       string;
   address?:   string;

@@ -197,7 +197,7 @@ export class Members implements OnInit {
     return this.fb.group({
       first_name: [member?.first_name ?? '', [Validators.required, Validators.maxLength(100)]],
       last_name:  [member?.last_name  ?? '', [Validators.required, Validators.maxLength(100)]],
-      email:      [member?.email      ?? '', [Validators.required, Validators.email]],
+      email:      [member?.email      ?? '', [Validators.email]],
       phone:      [member?.phone      ?? ''],
       dob:        [(member?.dob       ?? '').slice(0, 10)],
       address:    [member?.address    ?? ''],

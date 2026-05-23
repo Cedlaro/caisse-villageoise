@@ -21,7 +21,7 @@ export const registerValidator: ValidationChain[] = [
 export const adminCreateValidator: ValidationChain[] = [
   body('first_name').trim().notEmpty().withMessage('First name is required').isLength({ max: 100 }),
   body('last_name').trim().notEmpty().withMessage('Last name is required').isLength({ max: 100 }),
-  body('email').trim().notEmpty().isEmail().withMessage('Valid email is required').normalizeEmail(),
+  body('email').optional({ checkFalsy: true }).trim().isEmail().withMessage('Must be a valid email if provided').normalizeEmail(),
   body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 30 }),
   body('dob').optional({ checkFalsy: true }).isISO8601().withMessage('Date must be YYYY-MM-DD'),
   body('address').optional({ checkFalsy: true }).trim(),
@@ -38,7 +38,7 @@ export const adminCreateValidator: ValidationChain[] = [
 export const adminUpdateValidator: ValidationChain[] = [
   body('first_name').trim().notEmpty().withMessage('First name is required').isLength({ max: 100 }),
   body('last_name').trim().notEmpty().withMessage('Last name is required').isLength({ max: 100 }),
-  body('email').trim().notEmpty().isEmail().withMessage('Valid email is required').normalizeEmail(),
+  body('email').optional({ checkFalsy: true }).trim().isEmail().withMessage('Must be a valid email if provided').normalizeEmail(),
   body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 30 }),
   body('dob').optional({ checkFalsy: true }).isISO8601().withMessage('Date must be YYYY-MM-DD'),
   body('address').optional({ checkFalsy: true }).trim(),
