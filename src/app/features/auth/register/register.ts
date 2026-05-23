@@ -30,7 +30,7 @@ export class Register {
   readonly form = this.fb.group({
     first_name:       ['', [Validators.required, Validators.maxLength(100)]],
     last_name:        ['', [Validators.required, Validators.maxLength(100)]],
-    email:            ['', [Validators.required, Validators.email]],
+    email:            ['', [Validators.email]],
     phone:            ['', [Validators.required, Validators.maxLength(30)]],
     dob:              ['', [Validators.required]],
     address:          ['', [Validators.required]],

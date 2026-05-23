@@ -77,13 +77,15 @@
         <!-- Email & Phone -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              Email address <span class="text-gray-400 font-normal">(optional)</span>
+            </label>
             <input formControlName="email" type="email" autocomplete="email" placeholder="you@example.com"
               [class]="isInvalid('email')
                 ? 'w-full px-4 py-3 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:ring-2 focus:ring-red-400'
                 : 'w-full px-4 py-3 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'"/>
             @if (isInvalid('email')) {
-              <p class="mt-1 text-xs text-red-600">Valid email is required.</p>
+              <p class="mt-1 text-xs text-red-600">Please enter a valid email address.</p>
             }
           </div>
           <div>

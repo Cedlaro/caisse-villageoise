@@ -7,7 +7,7 @@ const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 export interface RegisterPayload {
   firstName:   string;
   lastName:    string;
-  email:       string;
+  email?:      string;
   phone:       string;
   dob:         string;
   address:     string;
@@ -43,12 +43,14 @@ export interface MemberListResult {
 export async function registerMember(payload: RegisterPayload): Promise<{ memberId: number; memberNumber: string }> {
   const { firstName, lastName, email, phone, dob, address, password } = payload;
 
-  const existing = await pool.execute<RowDataPacket[]>(
-    'SELECT id FROM members WHERE email = ? LIMIT 1',
-    [email],
-  );
-  if ((existing[0] as RowDataPacket[]).length > 0) {
-    throw { status: 409, message: 'An account with this email already exists.' };
+  if (email) {
+    const existing = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM members WHERE email = ? LIMIT 1',
+      [email],
+    );
+    if ((existing[0] as RowDataPacket[]).length > 0) {
+      throw { status: 409, message: 'An account with this email already exists.' };
+    }
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -61,7 +63,7 @@ export async function registerMember(payload: RegisterPayload): Promise<{ member
       `INSERT INTO members
          (member_number, email, first_name, last_name, phone, dob, address, password_hash, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_kyc')`,
-      ['PENDING', email, firstName, lastName, phone, dob, address, passwordHash],
+      ['PENDING', email || null, firstName, lastName, phone, dob, address, passwordHash],
     );
 
     const memberId     = result.insertId;

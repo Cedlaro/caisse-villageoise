@@ -3,7 +3,7 @@ import { body, ValidationChain } from 'express-validator';
 export const registerValidator: ValidationChain[] = [
   body('first_name').trim().notEmpty().withMessage('First name is required').isLength({ max: 100 }),
   body('last_name').trim().notEmpty().withMessage('Last name is required').isLength({ max: 100 }),
-  body('email').trim().notEmpty().isEmail().withMessage('Valid email is required').normalizeEmail(),
+  body('email').optional({ checkFalsy: true }).trim().isEmail().withMessage('Must be a valid email if provided').normalizeEmail(),
   body('phone').trim().notEmpty().withMessage('Phone number is required').isLength({ max: 30 }),
   body('dob').notEmpty().withMessage('Date of birth is required').isISO8601().withMessage('Date must be in YYYY-MM-DD format'),
   body('address').trim().notEmpty().withMessage('Address is required'),
