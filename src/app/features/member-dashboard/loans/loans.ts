@@ -41,7 +41,7 @@ export class MemberLoans implements OnInit {
     this.applyError.set(null);
     this.form = this.fb.group({
       loan_amount:   ['', [Validators.required, Validators.min(100)]],
-      interest_rate: ['', [Validators.required, Validators.min(0.01), Validators.max(100)]],
+      interest_rate: [8, [Validators.required, Validators.min(0.01), Validators.max(100)]],
       term_months:   ['', [Validators.required, Validators.min(1), Validators.max(360)]],
     });
     this.showApply.set(true);
