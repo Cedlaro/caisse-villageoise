@@ -89,8 +89,8 @@ export class AdminLoans implements OnInit {
     this.loanForm = this.fb.group({
       member_number: ['', [Validators.required]],
       loan_amount:   ['', [Validators.required, Validators.min(100)]],
-      interest_rate: [8, [Validators.required, Validators.min(0.01), Validators.max(100)]],
-      term_months:   ['', [Validators.required, Validators.min(1), Validators.max(360)]],
+      interest_rate: [8, [Validators.required, Validators.min(1), Validators.max(20)]],
+      term_months:   [12, [Validators.required, Validators.min(1), Validators.max(24)]],
     });
     this.showLoanModal.set(true);
   }
@@ -101,8 +101,8 @@ export class AdminLoans implements OnInit {
     this.loanModalError.set(null);
     this.loanForm = this.fb.group({
       loan_amount:   [Number(loan.loan_amount),   [Validators.required, Validators.min(100)]],
-      interest_rate: [Number(loan.interest_rate), [Validators.required, Validators.min(0.01), Validators.max(100)]],
-      term_months:   [loan.term_months,            [Validators.required, Validators.min(1), Validators.max(360)]],
+      interest_rate: [Number(loan.interest_rate), [Validators.required, Validators.min(1), Validators.max(20)]],
+      term_months:   [loan.term_months,            [Validators.required, Validators.min(1), Validators.max(24)]],
     });
     this.showLoanModal.set(true);
   }

@@ -1,0 +1,62 @@
+<div class="space-y-6">
+
+  <div>
+    <h2 class="text-xl font-bold text-gray-900">My Beneficiaries</h2>
+    <p class="text-sm text-gray-500 mt-0.5">Individuals designated to receive your account benefits. Contact a credit union officer to make changes.</p>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-16">
+      <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+    </div>
+  } @else if (errorMsg()) {
+    <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{{ errorMsg() }}</div>
+  } @else if (beneficiaries().length === 0) {
+    <div class="bg-white rounded-2xl border border-gray-200 flex flex-col items-center justify-center py-16 text-center">
+      <svg class="w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      <p class="text-sm text-gray-500">No beneficiaries on record.</p>
+      <p class="text-xs text-gray-400 mt-1">Please visit a branch or contact support to add beneficiaries.</p>
+    </div>
+  } @else {
+    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+
+      <!-- Allocation summary -->
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-xs font-medium text-gray-600">Total Allocation</span>
+          <span class="text-xs font-semibold"
+            [class]="allocated() === 100 ? 'text-green-700' : 'text-gray-700'">
+            {{ allocated() }}%
+          </span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="h-2 rounded-full transition-all duration-300"
+            [style.width.%]="allocated()"
+            [class]="allocated() === 100 ? 'bg-green-500' : 'bg-blue-500'">
+          </div>
+        </div>
+      </div>
+
+      <div class="divide-y divide-gray-100">
+        @for (b of beneficiaries(); track b.id) {
+          <div class="flex items-center gap-4 px-6 py-4">
+            <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm shrink-0">
+              {{ b.full_name[0] }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-900 truncate">{{ b.full_name }}</p>
+              <p class="text-xs text-gray-500">{{ b.relationship }}</p>
+            </div>
+            <span class="text-sm font-bold text-blue-900 shrink-0">{{ b.percentage }}%</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+</div>

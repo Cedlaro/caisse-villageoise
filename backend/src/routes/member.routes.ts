@@ -14,6 +14,7 @@ import {
   getMemberController,
   updateStatusController,
   getMeController,
+  getStatsController,
 } from '../controllers/member.controller';
 
 const router = Router();
@@ -25,6 +26,7 @@ router.post('/register', registerValidator, registerController);
 router.get('/me', authenticate, requireRole('member'), getMeController);
 
 // Admin / staff only
+router.get   ('/admin/stats',                authenticate, requireRole('admin', 'staff'), getStatsController);
 router.post  ('/admin/members',              authenticate, requireRole('admin', 'staff'), adminCreateValidator,  adminCreateController);
 router.get   ('/admin/members',              authenticate, requireRole('admin', 'staff'), listMembersController);
 router.get   ('/admin/members/:id',          authenticate, requireRole('admin', 'staff'), getMemberController);

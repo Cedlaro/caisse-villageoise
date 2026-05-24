@@ -7,6 +7,7 @@ import {
   listMembers,
   getMemberById,
   updateMemberStatus,
+  getAdminStats,
 } from '../services/member.service';
 
 interface ApiError { status: number; message: string; }
@@ -123,6 +124,16 @@ export async function updateStatusController(req: Request, res: Response, next: 
     res.json({ message: `Member status updated to ${status}.` });
   } catch (err) {
     if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }
+    next(err);
+  }
+}
+
+// GET /api/v1/admin/stats
+export async function getStatsController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const stats = await getAdminStats();
+    res.json(stats);
+  } catch (err) {
     next(err);
   }
 }

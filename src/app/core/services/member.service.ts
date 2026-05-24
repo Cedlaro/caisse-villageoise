@@ -8,6 +8,7 @@ import {
   RegisterPayload,
   AdminMemberPayload,
   UpdateMemberPayload,
+  AdminStats,
 } from '../models/member.models';
 
 @Injectable({ providedIn: 'root' })
@@ -58,5 +59,9 @@ export class MemberService {
       `${this.base}/admin/members/${id}`,
       payload,
     );
+  }
+
+  getAdminStats(): Observable<AdminStats> {
+    return this.http.get<AdminStats>(`${this.base}/admin/stats`);
   }
 }

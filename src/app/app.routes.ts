@@ -36,6 +36,10 @@ export const routes: Routes = [
         path: 'loans',
         loadComponent: () => import('./features/member-dashboard/loans/loans').then(m => m.MemberLoans),
       },
+      {
+        path: 'beneficiaries',
+        loadComponent: () => import('./features/member-dashboard/beneficiaries/beneficiaries').then(m => m.MemberBeneficiaries),
+      },
     ],
   },
 
@@ -60,6 +64,10 @@ export const routes: Routes = [
       {
         path: 'loans',
         loadComponent: () => import('./features/admin-dashboard/loans/loans').then(m => m.AdminLoans),
+      },
+      {
+        path: 'beneficiaries',
+        loadComponent: () => import('./features/admin-dashboard/beneficiaries/beneficiaries').then(m => m.AdminBeneficiaries),
       },
     ],
   },
