@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { BeneficiaryService } from '../../../core/services/beneficiary.service';
 import { MemberService } from '../../../core/services/member.service';
 import { Beneficiary } from '../../../core/models/beneficiary.models';
@@ -124,7 +125,7 @@ export class AdminBeneficiaries {
     this.modalError.set(null);
 
     const payload = this.form.value as { full_name: string; relationship: string; percentage: number };
-    const obs$ = this.modalMode() === 'add'
+    const obs$: Observable<unknown> = this.modalMode() === 'add'
       ? this.beneficiaryService.addBeneficiary(m.id, payload)
       : this.beneficiaryService.updateBeneficiary(this.editingId()!, payload);
 
