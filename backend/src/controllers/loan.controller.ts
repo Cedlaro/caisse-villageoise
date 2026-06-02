@@ -119,14 +119,26 @@ export async function updateLoanController(req: Request, res: Response, next: Ne
   }
 }
 
+export async function getLoanRepaymentsController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const loanId = parseInt(req.params['id']);
+    if (isNaN(loanId)) { res.status(400).json({ message: 'Invalid loan ID.' }); return; }
+    const repayments = await loanService.getLoanRepayments(loanId);
+    res.json(repayments);
+  } catch (err) {
+    if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }
+    next(err);
+  }
+}
+
 export async function recordRepaymentController(req: Request, res: Response, next: NextFunction): Promise<void> {
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(400).json({ errors: errors.array() }); return; }
   try {
-    const loanId  = parseInt(req.params['id']);
-    const staffId = req.user!.userId;
-    const { amount } = req.body as { amount: number };
-    await loanService.recordRepayment(loanId, amount, staffId);
+    const loanId        = parseInt(req.params['id']);
+    const staffId       = req.user!.userId;
+    const { amount, payment_method } = req.body as { amount: number; payment_method: 'account' | 'cash' };
+    await loanService.recordRepayment(loanId, amount, staffId, payment_method);
     res.json({ message: 'Repayment recorded successfully.' });
   } catch (err) {
     if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }

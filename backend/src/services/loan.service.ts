@@ -192,10 +192,34 @@ export async function updateLoanStatus(
   );
 }
 
+export interface LoanRepayment {
+  id:                    number;
+  amount:                string;
+  payment_method:        'account' | 'cash';
+  reference_id:          string;
+  processed_by_staff_id: number | null;
+  processed_by_name:     string | null;
+  created_at:            string;
+}
+
+export async function getLoanRepayments(loanId: number): Promise<LoanRepayment[]> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT t.id, t.amount, t.payment_method, t.reference_id, t.processed_by_staff_id, t.created_at,
+            CONCAT(s.first_name, ' ', s.last_name) AS processed_by_name
+     FROM transactions t
+     LEFT JOIN staff_users s ON s.id = t.processed_by_staff_id
+     WHERE t.loan_id = ? AND t.transaction_type = 'loan_repayment'
+     ORDER BY t.created_at DESC`,
+    [loanId],
+  );
+  return rows as LoanRepayment[];
+}
+
 export async function recordRepayment(
-  loanId:  number,
-  amount:  number,
-  staffId: number,
+  loanId:        number,
+  amount:        number,
+  staffId:       number,
+  paymentMethod: 'account' | 'cash',
 ): Promise<void> {
   const loan = await getLoanById(loanId);
   if (loan.status !== 'active') {
@@ -214,26 +238,30 @@ export async function recordRepayment(
     throw { status: 404, message: 'Member savings account not found.' };
   }
   const account = accRows[0] as { id: number; balance: string };
-  if (Number(account.balance) < amount) {
+
+  if (paymentMethod === 'account' && Number(account.balance) < amount) {
     throw { status: 400, message: 'Insufficient savings account balance for repayment.' };
   }
 
   const newRemaining = +(remaining - amount).toFixed(2);
   const newStatus: LoanStatus = newRemaining === 0 ? 'paid' : 'active';
-  const refId = `RPY-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const prefix = paymentMethod === 'cash' ? 'CASH-RPY' : 'RPY';
+  const refId = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     await connection.execute<ResultSetHeader>(
-      `INSERT INTO transactions (account_id, transaction_type, amount, reference_id, processed_by_staff_id)
-       VALUES (?, 'loan_repayment', ?, ?, ?)`,
-      [account.id, amount, refId, staffId],
+      `INSERT INTO transactions (account_id, loan_id, transaction_type, payment_method, amount, reference_id, processed_by_staff_id)
+       VALUES (?, ?, 'loan_repayment', ?, ?, ?, ?)`,
+      [account.id, loanId, paymentMethod, amount, refId, staffId],
     );
-    await connection.execute<ResultSetHeader>(
-      'UPDATE savings_accounts SET balance = balance - ? WHERE id = ?',
-      [amount, account.id],
-    );
+    if (paymentMethod === 'account') {
+      await connection.execute<ResultSetHeader>(
+        'UPDATE savings_accounts SET balance = balance - ? WHERE id = ?',
+        [amount, account.id],
+      );
+    }
     await connection.execute<ResultSetHeader>(
       'UPDATE loans SET remaining_balance = ?, status = ?, reviewed_by_staff_id = ? WHERE id = ?',
       [newRemaining, newStatus, staffId, loanId],

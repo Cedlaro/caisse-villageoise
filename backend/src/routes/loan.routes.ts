@@ -8,6 +8,7 @@ import {
   adminCreateLoanController,
   updateLoanController,
   updateLoanStatusController,
+  getLoanRepaymentsController,
   recordRepaymentController,
 } from '../controllers/loan.controller';
 import {
@@ -74,6 +75,13 @@ router.patch(
   requireRole('staff', 'admin'),
   updateStatusValidator,
   updateLoanStatusController,
+);
+
+router.get(
+  '/admin/loans/:id/repayments',
+  authenticate,
+  requireRole('staff', 'admin'),
+  getLoanRepaymentsController,
 );
 
 router.post(

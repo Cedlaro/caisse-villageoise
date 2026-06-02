@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Loan, LoanWithMember, LoanListResponse, ApplyLoanPayload, LoanStatus } from '../models/loan.models';
+import { Loan, LoanWithMember, LoanListResponse, ApplyLoanPayload, LoanStatus, LoanRepayment, PaymentMethod } from '../models/loan.models';
 
 @Injectable({ providedIn: 'root' })
 export class LoanService {
@@ -42,7 +42,14 @@ export class LoanService {
     return this.http.patch<{ message: string }>(`${this.base}/admin/loans/${id}/status`, { status });
   }
 
-  recordRepayment(id: number, amount: number): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${this.base}/admin/loans/${id}/repayment`, { amount });
+  getLoanRepayments(id: number): Observable<LoanRepayment[]> {
+    return this.http.get<LoanRepayment[]>(`${this.base}/admin/loans/${id}/repayments`);
+  }
+
+  recordRepayment(id: number, amount: number, paymentMethod: PaymentMethod): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/admin/loans/${id}/repayment`, {
+      amount,
+      payment_method: paymentMethod,
+    });
   }
 }

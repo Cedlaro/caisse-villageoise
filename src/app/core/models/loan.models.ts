@@ -31,3 +31,15 @@ export interface ApplyLoanPayload {
   interest_rate: number;
   term_months:   number;
 }
+
+export type PaymentMethod = 'account' | 'cash';
+
+export interface LoanRepayment {
+  id:                    number;
+  amount:                string;
+  payment_method:        PaymentMethod;
+  reference_id:          string;
+  processed_by_staff_id: number | null;
+  processed_by_name:     string | null;
+  created_at:            string;
+}

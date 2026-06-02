@@ -50,4 +50,7 @@ export const repaymentValidator = [
   body('amount')
     .isFloat({ min: 0.01 })
     .withMessage('Repayment amount must be greater than 0.'),
+  body('payment_method')
+    .isIn(['account', 'cash'])
+    .withMessage('Payment method must be "account" or "cash".'),
 ];

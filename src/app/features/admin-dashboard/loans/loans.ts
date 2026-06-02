@@ -1,16 +1,16 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LoanService } from '../../../core/services/loan.service';
-import { LoanWithMember, LoanStatus } from '../../../core/models/loan.models';
+import { LoanWithMember, LoanStatus, LoanRepayment, PaymentMethod } from '../../../core/models/loan.models';
 
 type LoanModalMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-admin-loans',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, DecimalPipe],
+  imports: [FormsModule, ReactiveFormsModule, DecimalPipe, DatePipe],
   templateUrl: './loans.html',
 })
 export class AdminLoans implements OnInit {
@@ -61,6 +61,13 @@ export class AdminLoans implements OnInit {
   readonly isSavingRepay  = signal(false);
   readonly repayError     = signal<string | null>(null);
   repayForm!: FormGroup;
+
+  // Repayment history modal
+  readonly showHistoryModal  = signal(false);
+  readonly historyLoan       = signal<LoanWithMember | null>(null);
+  readonly repaymentHistory  = signal<LoanRepayment[]>([]);
+  readonly isLoadingHistory  = signal(false);
+  readonly historyError      = signal<string | null>(null);
 
   ngOnInit(): void { this.load(); }
 
@@ -187,7 +194,8 @@ export class AdminLoans implements OnInit {
     this.repayLoan.set(loan);
     this.repayError.set(null);
     this.repayForm = this.fb.group({
-      amount: ['', [Validators.required, Validators.min(0.01)]],
+      amount:         ['', [Validators.required, Validators.min(0.01)]],
+      payment_method: ['cash', Validators.required],
     });
     this.showRepayModal.set(true);
   }
@@ -200,7 +208,8 @@ export class AdminLoans implements OnInit {
     if (!loan) return;
     this.isSavingRepay.set(true);
     this.repayError.set(null);
-    this.loanService.recordRepayment(loan.id, Number(this.repayForm.value.amount)).subscribe({
+    const { amount, payment_method } = this.repayForm.value as { amount: number; payment_method: PaymentMethod };
+    this.loanService.recordRepayment(loan.id, Number(amount), payment_method).subscribe({
       next: (res) => {
         this.isSavingRepay.set(false);
         this.closeRepayModal();
@@ -213,6 +222,32 @@ export class AdminLoans implements OnInit {
         this.repayError.set((err.error as { message?: string })?.message ?? 'Failed to record repayment.');
       },
     });
+  }
+
+  // ── Repayment history ───────────────────────────────────────────────────────
+
+  openHistoryModal(loan: LoanWithMember): void {
+    this.historyLoan.set(loan);
+    this.repaymentHistory.set([]);
+    this.historyError.set(null);
+    this.isLoadingHistory.set(true);
+    this.showHistoryModal.set(true);
+    this.loanService.getLoanRepayments(loan.id).subscribe({
+      next: (data) => { this.repaymentHistory.set(data); this.isLoadingHistory.set(false); },
+      error: () => { this.historyError.set('Failed to load repayment history.'); this.isLoadingHistory.set(false); },
+    });
+  }
+
+  closeHistoryModal(): void { this.showHistoryModal.set(false); }
+
+  paymentMethodLabel(method: PaymentMethod): string {
+    return method === 'cash' ? 'Cash' : 'Savings Account';
+  }
+
+  paymentMethodClass(method: PaymentMethod): string {
+    return method === 'cash'
+      ? 'bg-amber-100 text-amber-800'
+      : 'bg-blue-100 text-blue-800';
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
