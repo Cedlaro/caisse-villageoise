@@ -1,7 +1,7 @@
 import pool from '../db/pool';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
-export type LoanStatus = 'applied' | 'under_review' | 'approved' | 'active' | 'defaulted' | 'paid';
+export type LoanStatus = 'active' | 'defaulted' | 'paid';
 
 export interface Loan {
   id:                   number;
@@ -20,6 +20,7 @@ export interface LoanWithMember extends Loan {
   last_name:        string;
   member_number:    string;
   reviewed_by_name: string | null;
+  repayment_count:  number;
 }
 
 export interface LoanListResult {
@@ -30,12 +31,9 @@ export interface LoanListResult {
 }
 
 const TRANSITIONS: Record<LoanStatus, LoanStatus[]> = {
-  applied:      ['under_review'],
-  under_review: ['approved', 'applied'],
-  approved:     ['active'],
-  active:       ['defaulted'],
-  defaulted:    [],
-  paid:         [],
+  active:    ['defaulted'],
+  defaulted: [],
+  paid:      [],
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────────
@@ -103,11 +101,14 @@ export async function listLoans(opts: {
     `SELECT l.id, l.member_id, l.loan_amount, l.interest_rate, l.term_months,
             l.status, l.remaining_balance, l.reviewed_by_staff_id, l.created_at,
             m.first_name, m.last_name, m.member_number,
-            CONCAT(s.first_name, ' ', s.last_name) AS reviewed_by_name
+            CONCAT(s.first_name, ' ', s.last_name) AS reviewed_by_name,
+            COUNT(t.id) AS repayment_count
      FROM loans l
      JOIN members m ON m.id = l.member_id
      LEFT JOIN staff_users s ON s.id = l.reviewed_by_staff_id
+     LEFT JOIN transactions t ON t.loan_id = l.id AND t.transaction_type = 'loan_repayment'
      ${where}
+     GROUP BY l.id
      ORDER BY l.created_at DESC
      LIMIT ${limit} OFFSET ${offset}`,
     params,
@@ -138,7 +139,7 @@ export async function createLoanByAdmin(payload: {
 
   const [result] = await pool.execute<ResultSetHeader>(
     `INSERT INTO loans (member_id, loan_amount, interest_rate, term_months, status, remaining_balance, reviewed_by_staff_id)
-     VALUES (?, ?, ?, ?, 'applied', ?, ?)`,
+     VALUES (?, ?, ?, ?, 'active', ?, ?)`,
     [memberId, loanAmount, interestRate, termMonths, loanAmount, staffId],
   );
   return { loanId: result.insertId };
@@ -148,14 +149,10 @@ export async function updateLoan(
   id:      number,
   payload: { loanAmount: number; interestRate: number; termMonths: number },
 ): Promise<void> {
-  const loan = await getLoanById(id);
-  if (!['applied', 'under_review'].includes(loan.status)) {
-    throw { status: 400, message: 'Only loans with status Applied or Under Review can be edited.' };
-  }
   const { loanAmount, interestRate, termMonths } = payload;
   await pool.execute<ResultSetHeader>(
-    'UPDATE loans SET loan_amount = ?, interest_rate = ?, term_months = ?, remaining_balance = ? WHERE id = ?',
-    [loanAmount, interestRate, termMonths, loanAmount, id],
+    'UPDATE loans SET loan_amount = ?, interest_rate = ?, term_months = ? WHERE id = ?',
+    [loanAmount, interestRate, termMonths, id],
   );
 }
 
@@ -168,7 +165,7 @@ export async function applyForLoan(payload: {
   const { memberId, loanAmount, interestRate, termMonths } = payload;
   const [result] = await pool.execute<ResultSetHeader>(
     `INSERT INTO loans (member_id, loan_amount, interest_rate, term_months, status, remaining_balance)
-     VALUES (?, ?, ?, ?, 'applied', ?)`,
+     VALUES (?, ?, ?, ?, 'active', ?)`,
     [memberId, loanAmount, interestRate, termMonths, loanAmount],
   );
   return { loanId: result.insertId };

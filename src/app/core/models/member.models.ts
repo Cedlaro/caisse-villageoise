@@ -14,6 +14,7 @@ export interface MemberSummary {
 export interface MemberDetail extends MemberSummary {
   address:       string | null;
   dob:           string | null;
+  activity:      string | null;
   last_login_at: string | null;
 }
 
@@ -49,8 +50,24 @@ export interface AdminMemberPayload {
   phone?:     string;
   dob?:       string;
   address?:   string;
-  password:   string;
+  activity?:  string;
   status?:    MemberStatus;
+}
+
+export interface BulkImportPayload {
+  first_name: string;
+  last_name:  string;
+  email?:     string;
+  phone?:     string;
+  dob?:       string;
+  address?:   string;
+  activity?:  string;
+  status?:    MemberStatus;
+}
+
+export interface BulkImportResult {
+  created: number;
+  failed:  { row: number; name: string; error: string }[];
 }
 
 export interface UpdateMemberPayload {
@@ -60,4 +77,5 @@ export interface UpdateMemberPayload {
   phone?:     string;
   dob?:       string;
   address?:   string;
+  activity?:  string;
 }

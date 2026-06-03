@@ -31,13 +31,10 @@ export class AdminLoans implements OnInit {
   readonly totalPages = computed(() => Math.ceil(this.total() / this.limit()));
 
   readonly statusOptions: { value: string; label: string }[] = [
-    { value: 'all',          label: 'All' },
-    { value: 'applied',      label: 'Applied' },
-    { value: 'under_review', label: 'Under Review' },
-    { value: 'approved',     label: 'Approved' },
-    { value: 'active',       label: 'Active' },
-    { value: 'defaulted',    label: 'Defaulted' },
-    { value: 'paid',         label: 'Paid' },
+    { value: 'all',       label: 'All' },
+    { value: 'active',    label: 'Active' },
+    { value: 'defaulted', label: 'Defaulted' },
+    { value: 'paid',      label: 'Paid' },
   ];
 
   // Add / Edit loan modal
@@ -142,19 +139,16 @@ export class AdminLoans implements OnInit {
   }
 
   canEdit(loan: LoanWithMember): boolean {
-    return loan.status === 'applied' || loan.status === 'under_review';
+    return loan.status === 'active' && loan.repayment_count === 0;
   }
 
   // ── Status transition ───────────────────────────────────────────────────────
 
   nextStatuses(loan: LoanWithMember): LoanStatus[] {
     const map: Record<LoanStatus, LoanStatus[]> = {
-      applied:      ['under_review'],
-      under_review: ['approved', 'applied'],
-      approved:     ['active'],
-      active:       ['defaulted'],
-      defaulted:    [],
-      paid:         [],
+      active:    ['defaulted'],
+      defaulted: [],
+      paid:      [],
     };
     return map[loan.status] ?? [];
   }
@@ -254,31 +248,25 @@ export class AdminLoans implements OnInit {
 
   monthlyPayment(loan: LoanWithMember): number {
     const P = Number(loan.loan_amount);
-    const r = Number(loan.interest_rate) / 100 / 12;
+    const r = Number(loan.interest_rate) / 100;
     const n = loan.term_months;
     if (r === 0) return P / n;
-    return (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    return (P + (P * r)) / n;
   }
 
   statusLabel(status: LoanStatus): string {
     return {
-      applied:      'Applied',
-      under_review: 'Under Review',
-      approved:     'Approved',
-      active:       'Active',
-      defaulted:    'Defaulted',
-      paid:         'Paid',
+      active:    'Active',
+      defaulted: 'Defaulted',
+      paid:      'Paid',
     }[status];
   }
 
   statusClass(status: LoanStatus): string {
     return {
-      applied:      'bg-gray-100 text-gray-700',
-      under_review: 'bg-yellow-100 text-yellow-800',
-      approved:     'bg-blue-100 text-blue-800',
-      active:       'bg-green-100 text-green-800',
-      defaulted:    'bg-red-100 text-red-800',
-      paid:         'bg-emerald-100 text-emerald-800',
+      active:    'bg-green-100 text-green-800',
+      defaulted: 'bg-red-100 text-red-800',
+      paid:      'bg-emerald-100 text-emerald-800',
     }[status];
   }
 }

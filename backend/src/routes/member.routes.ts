@@ -5,6 +5,7 @@ import {
   adminCreateValidator,
   adminUpdateValidator,
   updateStatusValidator,
+  changePasswordValidator,
 } from '../middleware/validators/member.validator';
 import {
   registerController,
@@ -15,6 +16,8 @@ import {
   updateStatusController,
   getMeController,
   getStatsController,
+  changeMyPasswordController,
+  bulkImportController,
 } from '../controllers/member.controller';
 
 const router = Router();
@@ -22,10 +25,12 @@ const router = Router();
 // Public
 router.post('/register', registerValidator, registerController);
 
-// Authenticated member
-router.get('/me', authenticate, requireRole('member'), getMeController);
+// Authenticated member — self-service
+router.get   ('/me',          authenticate, requireRole('member'), getMeController);
+router.patch ('/me/password', authenticate, requireRole('member'), changePasswordValidator,   changeMyPasswordController);
 
 // Admin / staff only
+router.post  ('/admin/members/bulk-import', authenticate, requireRole('admin', 'staff'), bulkImportController);
 router.get   ('/admin/stats',                authenticate, requireRole('admin', 'staff'), getStatsController);
 router.post  ('/admin/members',              authenticate, requireRole('admin', 'staff'), adminCreateValidator,  adminCreateController);
 router.get   ('/admin/members',              authenticate, requireRole('admin', 'staff'), listMembersController);

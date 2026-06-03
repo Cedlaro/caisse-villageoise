@@ -1,4 +1,4 @@
-export type LoanStatus = 'applied' | 'under_review' | 'approved' | 'active' | 'defaulted' | 'paid';
+export type LoanStatus = 'active' | 'defaulted' | 'paid';
 
 export interface Loan {
   id:                   number;
@@ -17,6 +17,7 @@ export interface LoanWithMember extends Loan {
   last_name:        string;
   member_number:    string;
   reviewed_by_name: string | null;
+  repayment_count:  number;
 }
 
 export interface LoanListResponse {

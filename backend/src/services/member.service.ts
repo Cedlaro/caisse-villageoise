@@ -26,8 +26,9 @@ export interface MemberSummary {
 }
 
 export interface MemberDetail extends MemberSummary {
-  address:      string | null;
-  dob:          string | null;
+  address:       string | null;
+  dob:           string | null;
+  activity:      string | null;
   last_login_at: string | null;
 }
 
@@ -149,7 +150,7 @@ export async function listMembers(opts: {
 export async function getMemberById(id: number): Promise<MemberDetail> {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT id, member_number, email, first_name, last_name, phone,
-            address, dob, status, last_login_at, created_at
+            address, dob, activity, status, last_login_at, created_at
      FROM members WHERE id = ? LIMIT 1`,
     [id],
   );
@@ -161,12 +162,21 @@ export async function getMemberById(id: number): Promise<MemberDetail> {
 
 // ── Admin: create member ──────────────────────────────────────────────────────
 
-export interface AdminCreatePayload extends RegisterPayload {
-  status: 'pending_kyc' | 'active' | 'suspended';
+const DEFAULT_MEMBER_PASSWORD = 'Member@1234';
+
+export interface AdminCreatePayload {
+  firstName: string;
+  lastName:  string;
+  email?:    string;
+  phone?:    string;
+  dob?:      string;
+  address?:  string;
+  activity?: string;
+  status:    'pending_kyc' | 'active' | 'suspended';
 }
 
 export async function adminCreateMember(payload: AdminCreatePayload): Promise<{ memberId: number; memberNumber: string }> {
-  const { firstName, lastName, email, phone, dob, address, password, status } = payload;
+  const { firstName, lastName, email, phone, dob, address, activity, status } = payload;
 
   if (email) {
     const [existing] = await pool.execute<RowDataPacket[]>(
@@ -178,7 +188,7 @@ export async function adminCreateMember(payload: AdminCreatePayload): Promise<{ 
     }
   }
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const passwordHash = await bcrypt.hash(DEFAULT_MEMBER_PASSWORD, BCRYPT_ROUNDS);
   const connection   = await pool.getConnection();
 
   try {
@@ -186,9 +196,9 @@ export async function adminCreateMember(payload: AdminCreatePayload): Promise<{ 
 
     const [result] = await connection.execute<ResultSetHeader>(
       `INSERT INTO members
-         (member_number, email, first_name, last_name, phone, dob, address, password_hash, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ['PENDING', email || null, firstName, lastName, phone || null, dob || null, address || null, passwordHash, status],
+         (member_number, email, first_name, last_name, phone, dob, address, activity, password_hash, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ['PENDING', email || null, firstName, lastName, phone || null, dob || null, address || null, activity || null, passwordHash, status],
     );
 
     const memberId     = result.insertId;
@@ -219,12 +229,13 @@ export async function adminCreateMember(payload: AdminCreatePayload): Promise<{ 
 // ── Admin: update member profile ──────────────────────────────────────────────
 
 export interface UpdateMemberPayload {
-  firstName: string;
-  lastName:  string;
-  email?:    string;
-  phone?:    string;
-  dob?:      string;
-  address?:  string;
+  firstName:  string;
+  lastName:   string;
+  email?:     string;
+  phone?:     string;
+  dob?:       string;
+  address?:   string;
+  activity?:  string;
 }
 
 export async function updateMember(id: number, payload: UpdateMemberPayload): Promise<void> {
@@ -242,17 +253,96 @@ export async function updateMember(id: number, payload: UpdateMemberPayload): Pr
 
   await pool.execute<ResultSetHeader>(
     `UPDATE members
-     SET first_name = ?, last_name = ?, email = ?, phone = ?, dob = ?, address = ?
+     SET first_name = ?, last_name = ?, email = ?, phone = ?, dob = ?, address = ?, activity = ?
      WHERE id = ?`,
     [
       payload.firstName,
       payload.lastName,
-      payload.email   || null,
-      payload.phone   || null,
-      payload.dob     || null,
-      payload.address || null,
+      payload.email    || null,
+      payload.phone    || null,
+      payload.dob      || null,
+      payload.address  || null,
+      payload.activity || null,
       id,
     ],
+  );
+}
+
+// ── Admin: bulk import ────────────────────────────────────────────────────────
+
+export interface BulkImportRow {
+  firstName: string;
+  lastName:  string;
+  email?:    string;
+  phone?:    string;
+  dob?:      string;
+  address?:  string;
+  activity?: string;
+  status:    'pending_kyc' | 'active' | 'suspended';
+}
+
+export interface BulkImportResult {
+  created: number;
+  failed:  { row: number; name: string; error: string }[];
+}
+
+export async function bulkImportMembers(rows: BulkImportRow[]): Promise<BulkImportResult> {
+  let created = 0;
+  const failed: BulkImportResult['failed'] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const m = rows[i];
+    try {
+      await adminCreateMember({
+        firstName: m.firstName,
+        lastName:  m.lastName,
+        email:     m.email,
+        phone:     m.phone,
+        dob:       m.dob,
+        address:   m.address,
+        activity:  m.activity,
+        status:    m.status,
+      });
+      created++;
+    } catch (err: unknown) {
+      const msg = (err as { message?: string })?.message ?? 'Unknown error.';
+      failed.push({ row: i + 2, name: `${m.firstName} ${m.lastName}`, error: msg });
+    }
+  }
+
+  return { created, failed };
+}
+
+// ── Member: self-service profile & password ───────────────────────────────────
+
+export async function updateMyProfile(
+  memberId: number,
+  payload:  UpdateMemberPayload,
+): Promise<void> {
+  return updateMember(memberId, payload);
+}
+
+export async function changeMyMemberPassword(
+  memberId:        number,
+  currentPassword: string,
+  newPassword:     string,
+): Promise<void> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT password_hash FROM members WHERE id = ? LIMIT 1',
+    [memberId],
+  );
+  if ((rows as RowDataPacket[]).length === 0) {
+    throw { status: 404, message: 'Member not found.' };
+  }
+  const { password_hash } = rows[0] as { password_hash: string };
+  const valid = await bcrypt.compare(currentPassword, password_hash);
+  if (!valid) {
+    throw { status: 400, message: 'Current password is incorrect.' };
+  }
+  const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await pool.execute<ResultSetHeader>(
+    'UPDATE members SET password_hash = ? WHERE id = ?',
+    [newHash, memberId],
   );
 }
 

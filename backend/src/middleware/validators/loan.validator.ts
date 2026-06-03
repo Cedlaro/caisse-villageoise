@@ -42,7 +42,7 @@ export const updateLoanValidator = [
 
 export const updateStatusValidator = [
   body('status')
-    .isIn(['applied', 'under_review', 'approved', 'active', 'defaulted', 'paid'])
+    .isIn(['active', 'defaulted', 'paid'])
     .withMessage('Invalid loan status.'),
 ];
 

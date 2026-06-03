@@ -6,13 +6,24 @@
       <h2 class="text-xl font-bold text-gray-900">Members</h2>
       <p class="text-sm text-gray-500 mt-0.5">{{ total() }} total members</p>
     </div>
-    <button type="button" (click)="openCreate()"
-      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-      </svg>
-      Add Member
-    </button>
+    <div class="flex items-center gap-2">
+      @if (authService.currentUser()?.role === 'admin') {
+        <button type="button" (click)="openImportModal()"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Import CSV
+        </button>
+      }
+      <button type="button" (click)="openCreate()"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add Member
+      </button>
+    </div>
   </div>
 
   <!-- Action feedback -->
@@ -250,6 +261,13 @@
               class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
           </div>
 
+          <!-- Activity -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Activity</label>
+            <textarea formControlName="activity" rows="2" placeholder="e.g. Farmer, Teacher, Small business owner…"
+              class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+          </div>
+
           @if (modalMode() === 'create') {
             <!-- Status (create only) -->
             <div>
@@ -261,21 +279,9 @@
                 <option value="suspended">Suspended</option>
               </select>
             </div>
-
-            <!-- Password (create only) -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                Password <span class="text-red-500">*</span>
-              </label>
-              <input formControlName="password" type="password"
-                placeholder="Min 8 chars, 1 uppercase, 1 number"
-                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-              @if (form.get('password')?.invalid && form.get('password')?.touched) {
-                <p class="text-xs text-red-600 mt-1">
-                  Password must be at least 8 characters and include 1 uppercase letter and 1 number.
-                </p>
-              }
-            </div>
+            <p class="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              Default password <span class="font-mono font-semibold text-gray-600">Member@1234</span> will be set. The member can change it after first login.
+            </p>
           }
 
         </form>
@@ -302,5 +308,198 @@
       </button>
     </div>
 
+  </div>
+}
+
+<!-- Bulk Import CSV modal -->
+@if (showImportModal()) {
+  <div class="fixed inset-0 bg-black/40 z-40" (click)="closeImportModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+        <div>
+          <h3 class="text-base font-semibold text-gray-900">Import Members from CSV</h3>
+          <p class="text-xs text-gray-400 mt-0.5">
+            @if (importStep() === 'upload') { Upload a CSV file to bulk-create members. }
+            @else if (importStep() === 'preview') { Review {{ importRows().length }} row{{ importRows().length !== 1 ? 's' : '' }} before importing. }
+            @else { Import complete. }
+          </p>
+        </div>
+        <button type="button" (click)="closeImportModal()"
+          class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="overflow-auto flex-1 px-6 py-5">
+
+        <!-- ── Step 1: Upload ── -->
+        @if (importStep() === 'upload') {
+          <div class="space-y-4">
+
+            <!-- Template download -->
+            <div class="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <div>
+                <p class="text-sm font-medium text-blue-900">CSV template</p>
+                <p class="text-xs text-blue-700 mt-0.5">Columns: first_name, last_name, email, phone, dob, address, activity, status</p>
+              </div>
+              <button type="button" (click)="downloadTemplate()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Download Template
+              </button>
+            </div>
+
+            <!-- File input drop zone -->
+            <label class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+              <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              <p class="text-sm text-gray-600 font-medium">Click to select a CSV file</p>
+              <p class="text-xs text-gray-400 mt-1">.csv files only</p>
+              <input type="file" accept=".csv" class="hidden" (change)="onFileSelected($event)"/>
+            </label>
+
+            @if (importParseError()) {
+              <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{{ importParseError() }}</div>
+            }
+
+            <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500 space-y-1">
+              <p class="font-medium text-gray-700">Rules</p>
+              <p>• <span class="font-medium">first_name</span> and <span class="font-medium">last_name</span> are required. All other columns are optional.</p>
+              <p>• <span class="font-medium">dob</span> must be in <span class="font-mono">YYYY-MM-DD</span> format.</p>
+              <p>• <span class="font-medium">status</span> accepts <span class="font-mono">active</span>, <span class="font-mono">pending_kyc</span>, or <span class="font-mono">suspended</span> (defaults to <span class="font-mono">active</span>).</p>
+              <p>• Default password <span class="font-mono font-semibold text-gray-600">Member@1234</span> is assigned to every imported member.</p>
+            </div>
+          </div>
+        }
+
+        <!-- ── Step 2: Preview ── -->
+        @if (importStep() === 'preview') {
+          <div class="space-y-3">
+            <p class="text-sm text-gray-600">
+              <span class="font-semibold text-gray-900">{{ importRows().length }}</span> member{{ importRows().length !== 1 ? 's' : '' }} ready to import.
+              Rows missing both first and last name have been skipped.
+            </p>
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+              <table class="min-w-full text-xs">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wider">#</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  @for (row of importRows(); track $index) {
+                    <tr [class]="(!row.first_name || !row.last_name) ? 'bg-red-50' : 'hover:bg-gray-50'">
+                      <td class="px-3 py-2 text-gray-400">{{ $index + 2 }}</td>
+                      <td class="px-3 py-2 font-medium text-gray-900">
+                        {{ row.first_name || '—' }} {{ row.last_name || '—' }}
+                        @if (!row.first_name || !row.last_name) {
+                          <span class="ml-1 text-red-600 font-semibold">Missing name</span>
+                        }
+                      </td>
+                      <td class="px-3 py-2 text-gray-600">{{ row.email || '—' }}</td>
+                      <td class="px-3 py-2 text-gray-600">{{ row.phone || '—' }}</td>
+                      <td class="px-3 py-2">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
+                          [class]="row.status === 'active' ? 'bg-green-100 text-green-800' : row.status === 'suspended' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'">
+                          {{ row.status ?? 'active' }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        <!-- ── Step 3: Results ── -->
+        @if (importStep() === 'results') {
+          @if (importResult(); as result) {
+            <div class="space-y-4">
+              <!-- Summary -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="p-4 bg-green-50 border border-green-200 rounded-xl text-center">
+                  <p class="text-2xl font-bold text-green-700">{{ result.created }}</p>
+                  <p class="text-sm text-green-600 mt-0.5">Created successfully</p>
+                </div>
+                <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-center">
+                  <p class="text-2xl font-bold text-red-700">{{ result.failed.length }}</p>
+                  <p class="text-sm text-red-600 mt-0.5">Failed</p>
+                </div>
+              </div>
+
+              <!-- Failed rows -->
+              @if (result.failed.length > 0) {
+                <div>
+                  <p class="text-sm font-semibold text-gray-700 mb-2">Failed rows</p>
+                  <div class="rounded-xl border border-red-200 overflow-hidden">
+                    <table class="min-w-full text-xs">
+                      <thead class="bg-red-50">
+                        <tr>
+                          <th class="px-3 py-2 text-left font-semibold text-red-600">Row</th>
+                          <th class="px-3 py-2 text-left font-semibold text-red-600">Name</th>
+                          <th class="px-3 py-2 text-left font-semibold text-red-600">Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-red-100">
+                        @for (f of result.failed; track f.row) {
+                          <tr>
+                            <td class="px-3 py-2 text-gray-500">{{ f.row }}</td>
+                            <td class="px-3 py-2 font-medium text-gray-900">{{ f.name }}</td>
+                            <td class="px-3 py-2 text-red-700">{{ f.error }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 shrink-0">
+        <button type="button" (click)="closeImportModal()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors">
+          {{ importStep() === 'results' ? 'Close' : 'Cancel' }}
+        </button>
+        <div class="flex gap-2">
+          @if (importStep() === 'preview') {
+            <button type="button" (click)="importStep.set('upload')"
+              class="px-4 py-2 text-sm font-medium text-gray-700 rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors">
+              Back
+            </button>
+            <button type="button" (click)="runImport()" [disabled]="isImporting() || importRows().length === 0"
+              class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
+              @if (isImporting()) {
+                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Importing…
+              } @else {
+                Import {{ importRows().length }} Member{{ importRows().length !== 1 ? 's' : '' }}
+              }
+            </button>
+          }
+        </div>
+      </div>
+    </div>
   </div>
 }

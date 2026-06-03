@@ -8,6 +8,8 @@ import {
   RegisterPayload,
   AdminMemberPayload,
   UpdateMemberPayload,
+  BulkImportPayload,
+  BulkImportResult,
   AdminStats,
 } from '../models/member.models';
 
@@ -59,6 +61,14 @@ export class MemberService {
       `${this.base}/admin/members/${id}`,
       payload,
     );
+  }
+
+  bulkImport(members: BulkImportPayload[]): Observable<BulkImportResult> {
+    return this.http.post<BulkImportResult>(`${this.base}/admin/members/bulk-import`, { members });
+  }
+
+  changeMyPassword(payload: { current_password: string; new_password: string; confirm_password: string }): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(`${this.base}/members/me/password`, payload);
   }
 
   getAdminStats(): Observable<AdminStats> {

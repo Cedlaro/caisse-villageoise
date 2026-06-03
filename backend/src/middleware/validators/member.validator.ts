@@ -25,11 +25,7 @@ export const adminCreateValidator: ValidationChain[] = [
   body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 30 }),
   body('dob').optional({ checkFalsy: true }).isISO8601().withMessage('Date must be YYYY-MM-DD'),
   body('address').optional({ checkFalsy: true }).trim(),
-  body('password')
-    .notEmpty().withMessage('Password is required')
-    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
-    .matches(/[0-9]/).withMessage('Password must contain at least one number'),
+  body('activity').optional({ checkFalsy: true }).trim(),
   body('status')
     .optional()
     .isIn(['pending_kyc', 'active', 'suspended']).withMessage('Invalid status'),
@@ -42,6 +38,30 @@ export const adminUpdateValidator: ValidationChain[] = [
   body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 30 }),
   body('dob').optional({ checkFalsy: true }).isISO8601().withMessage('Date must be YYYY-MM-DD'),
   body('address').optional({ checkFalsy: true }).trim(),
+  body('activity').optional({ checkFalsy: true }).trim(),
+];
+
+export const updateMyProfileValidator: ValidationChain[] = [
+  body('first_name').trim().notEmpty().withMessage('First name is required').isLength({ max: 100 }),
+  body('last_name').trim().notEmpty().withMessage('Last name is required').isLength({ max: 100 }),
+  body('email').optional({ checkFalsy: true }).trim().isEmail().withMessage('Must be a valid email if provided').normalizeEmail(),
+  body('phone').optional({ checkFalsy: true }).trim().isLength({ max: 30 }),
+  body('dob').optional({ checkFalsy: true }).isISO8601().withMessage('Date must be YYYY-MM-DD'),
+  body('address').optional({ checkFalsy: true }).trim(),
+  body('activity').optional({ checkFalsy: true }).trim(),
+];
+
+export const changePasswordValidator: ValidationChain[] = [
+  body('current_password').notEmpty().withMessage('Current password is required.'),
+  body('new_password')
+    .notEmpty().withMessage('New password is required.')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters.')
+    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter.')
+    .matches(/[0-9]/).withMessage('Password must contain at least one number.'),
+  body('confirm_password').custom((value, { req }) => {
+    if (value !== req.body.new_password) throw new Error('Passwords do not match.');
+    return true;
+  }),
 ];
 
 export const updateStatusValidator: ValidationChain[] = [

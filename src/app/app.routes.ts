@@ -54,6 +54,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin-dashboard/overview/overview').then(m => m.AdminOverview),
       },
       {
+        path: 'profile',
+        loadComponent: () => import('./features/admin-dashboard/profile/profile').then(m => m.AdminProfile),
+      },
+      {
         path: 'members',
         loadComponent: () => import('./features/admin-dashboard/members/members').then(m => m.Members),
       },
@@ -68,6 +72,11 @@ export const routes: Routes = [
       {
         path: 'beneficiaries',
         loadComponent: () => import('./features/admin-dashboard/beneficiaries/beneficiaries').then(m => m.AdminBeneficiaries),
+      },
+      {
+        path: 'staff',
+        canActivate: [roleGuard(['admin'])],
+        loadComponent: () => import('./features/admin-dashboard/staff/staff').then(m => m.Staff),
       },
     ],
   },

@@ -78,23 +78,17 @@ export class MemberLoans implements OnInit {
 
   statusLabel(status: LoanStatus): string {
     return {
-      applied:      'Applied',
-      under_review: 'Under Review',
-      approved:     'Approved',
-      active:       'Active',
-      defaulted:    'Defaulted',
-      paid:         'Paid',
+      active:    'Active',
+      defaulted: 'Defaulted',
+      paid:      'Paid',
     }[status];
   }
 
   statusClass(status: LoanStatus): string {
     return {
-      applied:      'bg-gray-100 text-gray-700',
-      under_review: 'bg-yellow-100 text-yellow-800',
-      approved:     'bg-blue-100 text-blue-800',
-      active:       'bg-green-100 text-green-800',
-      defaulted:    'bg-red-100 text-red-800',
-      paid:         'bg-emerald-100 text-emerald-800',
+      active:    'bg-green-100 text-green-800',
+      defaulted: 'bg-red-100 text-red-800',
+      paid:      'bg-emerald-100 text-emerald-800',
     }[status];
   }
 }

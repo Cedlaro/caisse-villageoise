@@ -7,6 +7,7 @@ import memberRoutes         from './routes/member.routes';
 import savingsRoutes        from './routes/savings.routes';
 import loanRoutes           from './routes/loan.routes';
 import beneficiaryRoutes    from './routes/beneficiary.routes';
+import staffRoutes           from './routes/staff.routes';
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -29,6 +30,7 @@ app.use('/api/v1',         memberRoutes);
 app.use('/api/v1',         savingsRoutes);
 app.use('/api/v1',         loanRoutes);
 app.use('/api/v1',         beneficiaryRoutes);
+app.use('/api/v1',         staffRoutes);
 
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -36,7 +38,9 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
 
 // ── Serve Angular frontend ────────────────────────────────────────────────────
 
-const frontendPath = path.join(__dirname, '../../dist/caisse-villageoise/browser');
+const frontendPath = process.env.FRONTEND_PATH
+  ? path.resolve(process.env.FRONTEND_PATH)
+  : path.join(__dirname, '../browser');
 app.use(express.static(frontendPath));
 
 app.get('*', (_req: Request, res: Response) => {

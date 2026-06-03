@@ -3,7 +3,8 @@ import { SlicePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MemberService } from '../../../core/services/member.service';
-import { MemberSummary, MemberDetail, MemberStatus } from '../../../core/models/member.models';
+import { AuthService } from '../../../core/services/auth.service';
+import { MemberSummary, MemberDetail, MemberStatus, BulkImportPayload, BulkImportResult } from '../../../core/models/member.models';
 
 const STATUS_FILTERS = ['all', 'pending_kyc', 'active', 'suspended'] as const;
 type Filter = typeof STATUS_FILTERS[number];
@@ -16,6 +17,7 @@ type Filter = typeof STATUS_FILTERS[number];
 })
 export class Members implements OnInit {
   private readonly memberService = inject(MemberService);
+  protected readonly authService = inject(AuthService);
   private readonly fb            = inject(FormBuilder);
 
   readonly members        = signal<MemberSummary[]>([]);
@@ -142,7 +144,7 @@ export class Members implements OnInit {
         phone:      this.form.value.phone    || undefined,
         dob:        this.form.value.dob      || undefined,
         address:    this.form.value.address  || undefined,
-        password:   this.form.value.password,
+        activity:   this.form.value.activity || undefined,
         status:     this.form.value.status   || undefined,
       }).subscribe({
         next: (res) => {
@@ -165,6 +167,7 @@ export class Members implements OnInit {
         phone:      this.form.value.phone    || '',
         dob:        this.form.value.dob      || '',
         address:    this.form.value.address  || '',
+        activity:   this.form.value.activity || '',
       }).subscribe({
         next: () => {
           this.isSaving.set(false);
@@ -193,7 +196,116 @@ export class Members implements OnInit {
     }[status];
   }
 
-  private buildForm(mode: 'create' | 'edit', member?: MemberDetail): FormGroup {
+  // ── Bulk import ─────────────────────────────────────────────────────────────
+
+  readonly showImportModal = signal(false);
+  readonly importStep      = signal<'upload' | 'preview' | 'results'>('upload');
+  readonly importRows      = signal<BulkImportPayload[]>([]);
+  readonly importParseError = signal<string | null>(null);
+  readonly isImporting     = signal(false);
+  readonly importResult    = signal<BulkImportResult | null>(null);
+
+  readonly CSV_HEADERS = 'first_name,last_name,email,phone,dob,address,activity,status';
+  readonly CSV_EXAMPLE = 'Marie,Dupont,marie@example.com,+2309876543,1990-05-20,"12 Rue Centrale",Farmer,active\nJean,Martin,,+2301234567,,,,"pending_kyc"';
+
+  openImportModal(): void {
+    this.importStep.set('upload');
+    this.importRows.set([]);
+    this.importParseError.set(null);
+    this.importResult.set(null);
+    this.showImportModal.set(true);
+  }
+
+  closeImportModal(): void { this.showImportModal.set(false); }
+
+  downloadTemplate(): void {
+    const content = `${this.CSV_HEADERS}\n${this.CSV_EXAMPLE}`;
+    const blob = new Blob([content], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'members_import_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  onFileSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = (e.target?.result as string) ?? '';
+      try {
+        const rows = this.parseCSV(text);
+        if (rows.length === 0) {
+          this.importParseError.set('No data rows found in the CSV file.');
+          return;
+        }
+        this.importRows.set(rows);
+        this.importParseError.set(null);
+        this.importStep.set('preview');
+      } catch {
+        this.importParseError.set('Failed to parse the CSV file. Please check the format.');
+      }
+    };
+    reader.readAsText(file);
+    (event.target as HTMLInputElement).value = '';
+  }
+
+  runImport(): void {
+    const rows = this.importRows();
+    if (rows.length === 0) return;
+    this.isImporting.set(true);
+    this.memberService.bulkImport(rows).subscribe({
+      next: (result) => {
+        this.isImporting.set(false);
+        this.importResult.set(result);
+        this.importStep.set('results');
+        if (result.created > 0) this.load();
+      },
+      error: () => {
+        this.isImporting.set(false);
+        this.importParseError.set('Import request failed. Please try again.');
+      },
+    });
+  }
+
+  private parseCSV(text: string): BulkImportPayload[] {
+    const lines  = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const nonEmpty = lines.filter(l => l.trim());
+    if (nonEmpty.length < 2) throw new Error('Not enough rows');
+
+    const headers = this.splitCSVLine(nonEmpty[0]).map(h => h.toLowerCase().trim());
+    const idx = (name: string) => headers.indexOf(name);
+
+    return nonEmpty.slice(1).map(line => {
+      const cols  = this.splitCSVLine(line);
+      const get   = (name: string) => (cols[idx(name)] ?? '').trim() || undefined;
+      const first = get('first_name') ?? '';
+      const last  = get('last_name')  ?? '';
+      const statusRaw = get('status') ?? '';
+      const status: MemberStatus = ['pending_kyc', 'active', 'suspended'].includes(statusRaw)
+        ? statusRaw as MemberStatus : 'active';
+      return { first_name: first, last_name: last, email: get('email'), phone: get('phone'),
+               dob: get('dob'), address: get('address'), activity: get('activity'), status };
+    }).filter(r => r.first_name || r.last_name);
+  }
+
+  private splitCSVLine(line: string): string[] {
+    const cols: string[] = [];
+    let cur = '';
+    let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    cols.push(cur);
+    return cols.map(c => c.trim());
+  }
+
+  private buildForm(_mode: 'create' | 'edit', member?: MemberDetail): FormGroup {
     return this.fb.group({
       first_name: [member?.first_name ?? '', [Validators.required, Validators.maxLength(100)]],
       last_name:  [member?.last_name  ?? '', [Validators.required, Validators.maxLength(100)]],
@@ -201,10 +313,8 @@ export class Members implements OnInit {
       phone:      [member?.phone      ?? ''],
       dob:        [(member?.dob       ?? '').slice(0, 10)],
       address:    [member?.address    ?? ''],
+      activity:   [member?.activity   ?? ''],
       status:     [member?.status     ?? 'active'],
-      password:   ['', mode === 'create'
-        ? [Validators.required, Validators.minLength(8), Validators.pattern(/(?=.*[A-Z])(?=.*\d)/)]
-        : []],
     });
   }
 }
