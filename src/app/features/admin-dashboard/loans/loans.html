@@ -331,9 +331,15 @@
       </div>
 
       <div class="px-6 py-5 space-y-4">
-        <div class="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-sm">
-          <span class="text-gray-500">Remaining balance</span>
-          <span class="font-semibold text-gray-900">RS {{ +repayLoan()!.remaining_balance | number:'1.2-2' }}</span>
+        <div class="p-3 bg-gray-50 rounded-xl grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <p class="text-gray-400 text-xs mb-0.5">Remaining balance</p>
+            <p class="font-semibold text-gray-900">RS {{ +repayLoan()!.remaining_balance | number:'1.2-2' }}</p>
+          </div>
+          <div>
+            <p class="text-gray-400 text-xs mb-0.5">Monthly payment</p>
+            <p class="font-semibold text-gray-700">RS {{ monthlyPayment(repayLoan()!) | number:'1.2-2' }}</p>
+          </div>
         </div>
 
         @if (repayError()) {
@@ -341,6 +347,18 @@
         }
 
         <form [formGroup]="repayForm" class="space-y-4">
+
+          <!-- Date -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Date <span class="text-red-500">*</span>
+            </label>
+            <input formControlName="transaction_date" type="date"
+              class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+            @if (repayForm.get('transaction_date')?.invalid && repayForm.get('transaction_date')?.touched) {
+              <p class="text-xs text-red-600 mt-1">Transaction date is required.</p>
+            }
+          </div>
 
           <!-- Payment method dropdown -->
           <div>
@@ -352,16 +370,34 @@
             </select>
           </div>
 
-          <!-- Amount -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Amount (RS) <span class="text-red-500">*</span>
-            </label>
-            <input formControlName="amount" type="number" min="0.01" step="0.01" placeholder="0.00"
-              class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-            @if (repayForm.get('amount')?.invalid && repayForm.get('amount')?.touched) {
-              <p class="text-xs text-red-600 mt-1">Enter a valid amount greater than 0.</p>
-            }
+          <!-- Capital + Interest -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Capital (RS) <span class="text-red-500">*</span>
+              </label>
+              <input formControlName="capital_amount" type="number" min="0" step="0.01" placeholder="0.00"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              @if (repayForm.get('capital_amount')?.invalid && repayForm.get('capital_amount')?.touched) {
+                <p class="text-xs text-red-600 mt-1">Enter 0 or greater.</p>
+              }
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Interest (RS) <span class="text-red-500">*</span>
+              </label>
+              <input formControlName="interest_amount" type="number" min="0" step="0.01" placeholder="0.00"
+                class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              @if (repayForm.get('interest_amount')?.invalid && repayForm.get('interest_amount')?.touched) {
+                <p class="text-xs text-red-600 mt-1">Enter 0 or greater.</p>
+              }
+            </div>
+          </div>
+
+          <!-- Computed total -->
+          <div class="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 text-sm">
+            <span class="text-gray-500">Total payment</span>
+            <span class="font-semibold text-gray-900">RS {{ repayTotal() | number:'1.2-2' }}</span>
           </div>
 
         </form>
@@ -436,7 +472,9 @@
             <thead>
               <tr class="border-b border-gray-100">
                 <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                <th class="pb-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount (RS)</th>
+                <th class="pb-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total (RS)</th>
+                <th class="pb-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Capital (RS)</th>
+                <th class="pb-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Interest (RS)</th>
                 <th class="pb-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Method</th>
                 <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reference</th>
                 <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Processed By</th>
@@ -446,10 +484,24 @@
               @for (r of repaymentHistory(); track r.id) {
                 <tr class="hover:bg-gray-50 transition-colors">
                   <td class="py-3 text-gray-700">
-                    {{ r.created_at | date:'dd MMM yyyy, HH:mm' }}
+                    {{ r.transaction_date | slice:0:10 }}
                   </td>
                   <td class="py-3 text-right font-semibold text-gray-900">
                     {{ +r.amount | number:'1.2-2' }}
+                  </td>
+                  <td class="py-3 text-right text-blue-700 font-medium">
+                    @if (r.capital_amount != null) {
+                      {{ +r.capital_amount | number:'1.2-2' }}
+                    } @else {
+                      <span class="text-gray-400">—</span>
+                    }
+                  </td>
+                  <td class="py-3 text-right text-amber-700 font-medium">
+                    @if (r.interest_amount != null) {
+                      {{ +r.interest_amount | number:'1.2-2' }}
+                    } @else {
+                      <span class="text-gray-400">—</span>
+                    }
                   </td>
                   <td class="py-3 text-center">
                     <span [class]="'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ' + paymentMethodClass(r.payment_method)">
@@ -464,17 +516,27 @@
           </table>
 
           <!-- Summary footer -->
-          <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-sm">
-            <span class="text-gray-500">{{ repaymentHistory().length }} payment{{ repaymentHistory().length !== 1 ? 's' : '' }}</span>
-            <div class="flex items-center gap-6">
+          <div class="mt-4 pt-4 border-t border-gray-100 space-y-2">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">{{ repaymentHistory().length }} payment{{ repaymentHistory().length !== 1 ? 's' : '' }}</span>
               <span class="text-gray-500">
                 Total paid:
                 <span class="font-semibold text-gray-900">
                   RS {{ repaymentHistory().reduce((s, r) => s + +r.amount, 0) | number:'1.2-2' }}
                 </span>
               </span>
+            </div>
+            <div class="flex items-center justify-between text-sm bg-gray-50 rounded-xl px-3 py-2">
+              <span class="text-blue-700">
+                Capital repaid:
+                <span class="font-semibold">RS {{ totalCapitalPaid() | number:'1.2-2' }}</span>
+              </span>
+              <span class="text-amber-700">
+                Interest paid:
+                <span class="font-semibold">RS {{ totalInterestPaid() | number:'1.2-2' }}</span>
+              </span>
               <span class="text-gray-500">
-                Remaining:
+                Remaining principal:
                 <span [class]="'font-semibold ' + (historyLoan()?.status === 'paid' ? 'text-emerald-600' : 'text-gray-900')">
                   RS {{ +historyLoan()!.remaining_balance | number:'1.2-2' }}
                 </span>

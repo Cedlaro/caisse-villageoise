@@ -47,10 +47,24 @@ export const updateStatusValidator = [
 ];
 
 export const repaymentValidator = [
-  body('amount')
-    .isFloat({ min: 0.01 })
-    .withMessage('Repayment amount must be greater than 0.'),
+  body('capital_amount')
+    .isFloat({ min: 0 })
+    .withMessage('Capital amount must be 0 or greater.'),
+  body('interest_amount')
+    .isFloat({ min: 0 })
+    .withMessage('Interest amount must be 0 or greater.'),
+  body('capital_amount').custom((_, { req }) => {
+    const capital  = parseFloat(req.body.capital_amount);
+    const interest = parseFloat(req.body.interest_amount);
+    if (isNaN(capital) || isNaN(interest) || capital + interest < 0.01) {
+      throw new Error('Total repayment (capital + interest) must be at least 0.01.');
+    }
+    return true;
+  }),
   body('payment_method')
     .isIn(['account', 'cash'])
     .withMessage('Payment method must be "account" or "cash".'),
+  body('transaction_date')
+    .notEmpty().withMessage('Transaction date is required')
+    .isISO8601().withMessage('Transaction date must be a valid date (YYYY-MM-DD)'),
 ];

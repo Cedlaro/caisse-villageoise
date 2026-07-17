@@ -46,10 +46,12 @@ export class LoanService {
     return this.http.get<LoanRepayment[]>(`${this.base}/admin/loans/${id}/repayments`);
   }
 
-  recordRepayment(id: number, amount: number, paymentMethod: PaymentMethod): Observable<{ message: string }> {
+  recordRepayment(id: number, capitalAmount: number, interestAmount: number, paymentMethod: PaymentMethod, transactionDate: string): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.base}/admin/loans/${id}/repayment`, {
-      amount,
-      payment_method: paymentMethod,
+      capital_amount:   capitalAmount,
+      interest_amount:  interestAmount,
+      payment_method:   paymentMethod,
+      transaction_date: transactionDate,
     });
   }
 }

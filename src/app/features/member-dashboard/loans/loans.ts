@@ -69,11 +69,11 @@ export class MemberLoans implements OnInit {
   }
 
   monthlyPayment(loan: Loan): number {
+    if (loan.monthly_payment != null) return Number(loan.monthly_payment);
     const P = Number(loan.loan_amount);
-    const r = Number(loan.interest_rate) / 100 / 12;
+    const r = Number(loan.interest_rate) / 100;
     const n = loan.term_months;
-    if (r === 0) return P / n;
-    return (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    return (P + P * r) / n;
   }
 
   statusLabel(status: LoanStatus): string {

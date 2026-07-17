@@ -8,6 +8,7 @@ export interface Loan {
   term_months:          number;
   status:               LoanStatus;
   remaining_balance:    string;
+  monthly_payment:      string | null;
   reviewed_by_staff_id: number | null;
   created_at:           string;
 }
@@ -38,6 +39,9 @@ export type PaymentMethod = 'account' | 'cash';
 export interface LoanRepayment {
   id:                    number;
   amount:                string;
+  capital_amount:        string | null;
+  interest_amount:       string | null;
+  transaction_date:      string;
   payment_method:        PaymentMethod;
   reference_id:          string;
   processed_by_staff_id: number | null;

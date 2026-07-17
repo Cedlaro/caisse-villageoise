@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { DecimalPipe, DatePipe } from '@angular/common';
+import { DecimalPipe, SlicePipe } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LoanService } from '../../../core/services/loan.service';
@@ -10,7 +10,7 @@ type LoanModalMode = 'create' | 'edit';
 @Component({
   selector: 'app-admin-loans',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, DecimalPipe, DatePipe],
+  imports: [FormsModule, ReactiveFormsModule, DecimalPipe, SlicePipe],
   templateUrl: './loans.html',
 })
 export class AdminLoans implements OnInit {
@@ -187,11 +187,20 @@ export class AdminLoans implements OnInit {
   openRepayModal(loan: LoanWithMember): void {
     this.repayLoan.set(loan);
     this.repayError.set(null);
+    const today = new Date().toISOString().slice(0, 10);
     this.repayForm = this.fb.group({
-      amount:         ['', [Validators.required, Validators.min(0.01)]],
-      payment_method: ['cash', Validators.required],
+      capital_amount:   ['', [Validators.required, Validators.min(0)]],
+      interest_amount:  ['', [Validators.required, Validators.min(0)]],
+      payment_method:   ['cash', Validators.required],
+      transaction_date: [today, Validators.required],
     });
     this.showRepayModal.set(true);
+  }
+
+  repayTotal(): number {
+    const c = Number(this.repayForm?.get('capital_amount')?.value) || 0;
+    const i = Number(this.repayForm?.get('interest_amount')?.value) || 0;
+    return +(c + i).toFixed(2);
   }
 
   closeRepayModal(): void { this.showRepayModal.set(false); this.isSavingRepay.set(false); this.repayError.set(null); }
@@ -202,8 +211,10 @@ export class AdminLoans implements OnInit {
     if (!loan) return;
     this.isSavingRepay.set(true);
     this.repayError.set(null);
-    const { amount, payment_method } = this.repayForm.value as { amount: number; payment_method: PaymentMethod };
-    this.loanService.recordRepayment(loan.id, Number(amount), payment_method).subscribe({
+    const { capital_amount, interest_amount, payment_method, transaction_date } = this.repayForm.value as {
+      capital_amount: number; interest_amount: number; payment_method: PaymentMethod; transaction_date: string;
+    };
+    this.loanService.recordRepayment(loan.id, Number(capital_amount), Number(interest_amount), payment_method, transaction_date).subscribe({
       next: (res) => {
         this.isSavingRepay.set(false);
         this.closeRepayModal();
@@ -247,11 +258,19 @@ export class AdminLoans implements OnInit {
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   monthlyPayment(loan: LoanWithMember): number {
+    if (loan.monthly_payment != null) return Number(loan.monthly_payment);
     const P = Number(loan.loan_amount);
     const r = Number(loan.interest_rate) / 100;
     const n = loan.term_months;
-    if (r === 0) return P / n;
-    return (P + (P * r)) / n;
+    return (P + P * r) / n;
+  }
+
+  totalCapitalPaid(): number {
+    return this.repaymentHistory().reduce((s, r) => s + (r.capital_amount != null ? +r.capital_amount : 0), 0);
+  }
+
+  totalInterestPaid(): number {
+    return this.repaymentHistory().reduce((s, r) => s + (r.interest_amount != null ? +r.interest_amount : 0), 0);
   }
 
   statusLabel(status: LoanStatus): string {

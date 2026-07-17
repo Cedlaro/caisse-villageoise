@@ -135,10 +135,12 @@ export async function recordRepaymentController(req: Request, res: Response, nex
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(400).json({ errors: errors.array() }); return; }
   try {
-    const loanId        = parseInt(req.params['id']);
-    const staffId       = req.user!.userId;
-    const { amount, payment_method } = req.body as { amount: number; payment_method: 'account' | 'cash' };
-    await loanService.recordRepayment(loanId, amount, staffId, payment_method);
+    const loanId  = parseInt(req.params['id']);
+    const staffId = req.user!.userId;
+    const { capital_amount, interest_amount, payment_method, transaction_date } = req.body as {
+      capital_amount: number; interest_amount: number; payment_method: 'account' | 'cash'; transaction_date: string;
+    };
+    await loanService.recordRepayment(loanId, Number(capital_amount), Number(interest_amount), staffId, payment_method, transaction_date);
     res.json({ message: 'Repayment recorded successfully.' });
   } catch (err) {
     if (isApiError(err)) { res.status(err.status).json({ message: err.message }); return; }

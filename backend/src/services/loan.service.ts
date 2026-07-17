@@ -11,6 +11,7 @@ export interface Loan {
   term_months:          number;
   status:               LoanStatus;
   remaining_balance:    string;
+  monthly_payment:      string | null;
   reviewed_by_staff_id: number | null;
   created_at:           string;
 }
@@ -36,12 +37,17 @@ const TRANSITIONS: Record<LoanStatus, LoanStatus[]> = {
   paid:      [],
 };
 
+function calcMonthlyPayment(principal: number, annualRate: number, termMonths: number): number {
+  const total = principal * (1 + annualRate / 100);
+  return +(total / termMonths).toFixed(2);
+}
+
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 export async function getLoanById(id: number): Promise<LoanWithMember> {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT l.id, l.member_id, l.loan_amount, l.interest_rate, l.term_months,
-            l.status, l.remaining_balance, l.reviewed_by_staff_id, l.created_at,
+            l.status, l.remaining_balance, l.monthly_payment, l.reviewed_by_staff_id, l.created_at,
             m.first_name, m.last_name, m.member_number,
             CONCAT(s.first_name, ' ', s.last_name) AS reviewed_by_name
      FROM loans l
@@ -59,7 +65,7 @@ export async function getLoanById(id: number): Promise<LoanWithMember> {
 export async function getLoansByMemberId(memberId: number): Promise<Loan[]> {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT id, member_id, loan_amount, interest_rate, term_months,
-            status, remaining_balance, reviewed_by_staff_id, created_at
+            status, remaining_balance, monthly_payment, reviewed_by_staff_id, created_at
      FROM loans WHERE member_id = ? ORDER BY created_at DESC`,
     [memberId],
   );
@@ -99,7 +105,7 @@ export async function listLoans(opts: {
 
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT l.id, l.member_id, l.loan_amount, l.interest_rate, l.term_months,
-            l.status, l.remaining_balance, l.reviewed_by_staff_id, l.created_at,
+            l.status, l.remaining_balance, l.monthly_payment, l.reviewed_by_staff_id, l.created_at,
             m.first_name, m.last_name, m.member_number,
             CONCAT(s.first_name, ' ', s.last_name) AS reviewed_by_name,
             COUNT(t.id) AS repayment_count
@@ -137,10 +143,13 @@ export async function createLoanByAdmin(payload: {
   }
   const memberId = (memberRows[0] as { id: number }).id;
 
+  const totalOwed    = loanAmount * (1 + interestRate / 100);
+  const monthlyPayment = calcMonthlyPayment(loanAmount, interestRate, termMonths);
+
   const [result] = await pool.execute<ResultSetHeader>(
-    `INSERT INTO loans (member_id, loan_amount, interest_rate, term_months, status, remaining_balance, reviewed_by_staff_id)
-     VALUES (?, ?, ?, ?, 'active', ?, ?)`,
-    [memberId, loanAmount, interestRate, termMonths, loanAmount, staffId],
+    `INSERT INTO loans (member_id, loan_amount, interest_rate, term_months, status, remaining_balance, monthly_payment, reviewed_by_staff_id)
+     VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`,
+    [memberId, loanAmount, interestRate, termMonths, totalOwed, monthlyPayment, staffId],
   );
   return { loanId: result.insertId };
 }
@@ -150,9 +159,12 @@ export async function updateLoan(
   payload: { loanAmount: number; interestRate: number; termMonths: number },
 ): Promise<void> {
   const { loanAmount, interestRate, termMonths } = payload;
+  const totalOwed      = loanAmount * (1 + interestRate / 100);
+  const monthlyPayment = calcMonthlyPayment(loanAmount, interestRate, termMonths);
+
   await pool.execute<ResultSetHeader>(
-    'UPDATE loans SET loan_amount = ?, interest_rate = ?, term_months = ? WHERE id = ?',
-    [loanAmount, interestRate, termMonths, id],
+    'UPDATE loans SET loan_amount = ?, interest_rate = ?, term_months = ?, remaining_balance = ?, monthly_payment = ? WHERE id = ?',
+    [loanAmount, interestRate, termMonths, totalOwed, monthlyPayment, id],
   );
 }
 
@@ -163,10 +175,13 @@ export async function applyForLoan(payload: {
   termMonths:   number;
 }): Promise<{ loanId: number }> {
   const { memberId, loanAmount, interestRate, termMonths } = payload;
+  const totalOwed      = loanAmount * (1 + interestRate / 100);
+  const monthlyPayment = calcMonthlyPayment(loanAmount, interestRate, termMonths);
+
   const [result] = await pool.execute<ResultSetHeader>(
-    `INSERT INTO loans (member_id, loan_amount, interest_rate, term_months, status, remaining_balance)
-     VALUES (?, ?, ?, ?, 'active', ?)`,
-    [memberId, loanAmount, interestRate, termMonths, loanAmount],
+    `INSERT INTO loans (member_id, loan_amount, interest_rate, term_months, status, remaining_balance, monthly_payment)
+     VALUES (?, ?, ?, ?, 'active', ?, ?)`,
+    [memberId, loanAmount, interestRate, termMonths, totalOwed, monthlyPayment],
   );
   return { loanId: result.insertId };
 }
@@ -192,6 +207,9 @@ export async function updateLoanStatus(
 export interface LoanRepayment {
   id:                    number;
   amount:                string;
+  capital_amount:        string | null;
+  interest_amount:       string | null;
+  transaction_date:      string;
   payment_method:        'account' | 'cash';
   reference_id:          string;
   processed_by_staff_id: number | null;
@@ -201,27 +219,33 @@ export interface LoanRepayment {
 
 export async function getLoanRepayments(loanId: number): Promise<LoanRepayment[]> {
   const [rows] = await pool.execute<RowDataPacket[]>(
-    `SELECT t.id, t.amount, t.payment_method, t.reference_id, t.processed_by_staff_id, t.created_at,
+    `SELECT t.id, t.amount, t.capital_amount, t.interest_amount,
+            t.transaction_date, t.payment_method, t.reference_id,
+            t.processed_by_staff_id, t.created_at,
             CONCAT(s.first_name, ' ', s.last_name) AS processed_by_name
      FROM transactions t
      LEFT JOIN staff_users s ON s.id = t.processed_by_staff_id
      WHERE t.loan_id = ? AND t.transaction_type = 'loan_repayment'
-     ORDER BY t.created_at DESC`,
+     ORDER BY t.transaction_date DESC, t.created_at DESC`,
     [loanId],
   );
   return rows as LoanRepayment[];
 }
 
 export async function recordRepayment(
-  loanId:        number,
-  amount:        number,
-  staffId:       number,
-  paymentMethod: 'account' | 'cash',
+  loanId:          number,
+  capitalAmount:   number,
+  interestAmount:  number,
+  staffId:         number,
+  paymentMethod:   'account' | 'cash',
+  transactionDate: string,
 ): Promise<void> {
   const loan = await getLoanById(loanId);
   if (loan.status !== 'active') {
     throw { status: 400, message: 'Only active loans can receive repayments.' };
   }
+
+  const amount    = +(capitalAmount + interestAmount).toFixed(2);
   const remaining = Number(loan.remaining_balance);
   if (amount > remaining) {
     throw { status: 400, message: `Amount exceeds remaining balance of RS ${remaining.toFixed(2)}.` };
@@ -241,17 +265,18 @@ export async function recordRepayment(
   }
 
   const newRemaining = +(remaining - amount).toFixed(2);
-  const newStatus: LoanStatus = newRemaining === 0 ? 'paid' : 'active';
+  const newStatus: LoanStatus = newRemaining <= 0 ? 'paid' : 'active';
   const prefix = paymentMethod === 'cash' ? 'CASH-RPY' : 'RPY';
-  const refId = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const refId  = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     await connection.execute<ResultSetHeader>(
-      `INSERT INTO transactions (account_id, loan_id, transaction_type, payment_method, amount, reference_id, processed_by_staff_id)
-       VALUES (?, ?, 'loan_repayment', ?, ?, ?, ?)`,
-      [account.id, loanId, paymentMethod, amount, refId, staffId],
+      `INSERT INTO transactions
+         (account_id, loan_id, transaction_type, payment_method, amount, capital_amount, interest_amount, transaction_date, reference_id, processed_by_staff_id)
+       VALUES (?, ?, 'loan_repayment', ?, ?, ?, ?, ?, ?, ?)`,
+      [account.id, loanId, paymentMethod, amount, capitalAmount, interestAmount, transactionDate, refId, staffId],
     );
     if (paymentMethod === 'account') {
       await connection.execute<ResultSetHeader>(
